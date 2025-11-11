@@ -19,7 +19,7 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader
 
 # Exponer puerto
-EXPOSE 9000
+EXPOSE 8000
 
 ENTRYPOINT ["sh", "entrypoint.sh"]
 
