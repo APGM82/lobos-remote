@@ -1,0 +1,42 @@
+services:
+  backend:
+    build:   
+      context: ./back  
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./back:/var/www/html
+    depends_on:
+      - db
+
+  frontend:
+    build: 
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: vite_app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./front:/app
+    depends_on:
+      - backend
+
+  db:
+    image: mysql:8
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: laravel
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+
+volumes:
+  dbdata:
+
