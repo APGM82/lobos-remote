@@ -12,7 +12,7 @@
                 <div class="header">
                     <a href="../../index.html">
                         <img alt="Inicio" src="../public/logo.png">
-                        <h1> Administrar usuarios</h1>
+                        <h1> Lobos de Castronegro</h1>
                     </a>
                 </div>
 
@@ -20,7 +20,31 @@
         </header>
 
         <main>
+            <div id="usersError" class="error disabled">
+                <h1>Ha sucecido un error</h1>
+                <p id="errorText">No se han podido encontrar usuarios.</p>
+            </div>
+            <div id="usersContainer">
+                <div class="title">
+                    <h1>Administrar usuarios</h1>
+                </div>
+                <div>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th class="w-10">IMG</th>
+                            <th class="w-30">Nombre</th>
+                            <th class="w-20">NickName</th>
+                            <th class="w-20">Email</th>
+                            <th class="w-20">Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody id="usersTable">
 
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </main>
 
         <footer>
@@ -50,6 +74,6 @@
                 </div>
             </div>
         </footer>
-        <script src="../ts/adminUser/MainUser.ts"></script>
+        <script src="../ts/adminUser/MainUser.ts" type="module"></script>
     </body>
 </html>

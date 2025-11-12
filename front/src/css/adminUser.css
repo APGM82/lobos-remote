@@ -1,0 +1,37 @@
+main div {
+    width: 90%;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: #CDD6D0;
+    margin: 1%;
+    padding: 1%;
+    border-radius: 10px;
+}
+
+table {
+    border-collapse: collapse;
+    border: 1px solid #ddd;
+    width: 95%;
+}
+
+table th {
+    padding: 8px;
+    text-align: center;
+    background-color: #AA4465;
+    color: #CDD6D0;
+
+}
+
+td img {
+    width: auto;
+}
+
+.title {
+    text-align: center;
+    display: block;
+    margin-bottom: 10px;
+
+}
