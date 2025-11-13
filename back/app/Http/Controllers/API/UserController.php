@@ -72,6 +72,21 @@ class UserController extends Controller
 
     }
 
+    public function destroy($id) {
+        $user = User::find($id);
+
+        if (is_null($user)) {
+            return response()->json(["success"=>false, "message"=>"Error in removing user!"], 400);
+        }
+
+        try {
+            $user->delete();
+            return response()->json(["success"=>true, "message"=>"User successfully removed!"], 200);
+        } catch (Exception $e) {
+            return response()->json(["success"=>false, "data" =>$e, "message"=>"Error in removing user!"], 400);
+        }
+    }
+
     public function generatePassword($length = 8)
     {
         $upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";

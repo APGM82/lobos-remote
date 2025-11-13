@@ -32,7 +32,23 @@ const addUser = async (data : any) => {
     }
 }
 
+const deleteUser = async (id) => {
+    try {
+        return await fetch(`${apiUrl}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                //'Authorization': `Bearer ${token}`
+            }
+        });
+    } catch (error) {
+        console.log(error)
+        throw error
+    }
+}
+
 export {
     getUsers,
-    addUser
+    addUser,
+    deleteUser
 }

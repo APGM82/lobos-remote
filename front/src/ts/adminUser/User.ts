@@ -1,5 +1,6 @@
-import {getUsers, addUser} from './CrudUser.ts'
+import {getUsers, addUser, deleteUser} from './CrudUser.ts'
 
+let selectedUser = ""
 
 const showUsers = () =>
     loadUsers().then(users => {
@@ -25,22 +26,53 @@ const chargeTable = (users: any[]) => {
     document.getElementById('usersTable')!.innerHTML = ""
     users.forEach((user) => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td class="text-center">
-                <img src="${user.image}" alt="${user.name}">
-            </td>
-            <td class="text-center">${user.name}</td>
-            <td class="text-center">${user.nickname}</td>
-            <td class="text-center">${user.email}</td>
-            <td class="d-flex align-items-center justify-content-center text-center">
-                <button class="btn warning">
-                    Editar
-                </button>
-                <button class="btn danger">
-                    Eliminar
-                </button>
-            </td>
-        `;
+
+        const tdImage = document.createElement('td');
+        tdImage.classList.add('text-center');
+        const userImage = document.createElement('img');
+        userImage.src = user.image;
+        userImage.alt = user.name;
+        tdImage.appendChild(userImage);
+        row.appendChild(tdImage);
+
+        const tdName = document.createElement('td');
+        tdName.classList.add('text-center');
+        tdName.textContent = user.name;
+        row.appendChild(tdName);
+
+        const tdNickname = document.createElement('td');
+        tdNickname.classList.add('text-center');
+        tdNickname.textContent = user.nickname;
+        row.appendChild(tdNickname);
+
+        const tdEmail = document.createElement('td');
+        tdEmail.classList.add('text-center');
+        tdEmail.textContent = user.email;
+        row.appendChild(tdEmail);
+
+        const tdActions = document.createElement('td');
+        tdActions.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center');
+
+        const editButton = document.createElement('button');
+        editButton.classList.add('btn', 'warning');
+        editButton.textContent = 'Editar';
+        tdActions.appendChild(editButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.classList.add('btn', 'danger');
+        deleteButton.id = 'deleteUserBtn';
+        deleteButton.value = user.id;
+        deleteButton.textContent = 'Eliminar';
+        tdActions.appendChild(deleteButton);
+
+        deleteButton.addEventListener('click', () => {
+            selectedUser = deleteButton!.value
+            const deleteModal = document.getElementById('deleteModal');
+            deleteModal!.style.display = 'flex';
+        });
+
+        row.appendChild(tdActions);
+
         document.getElementById('usersTable')?.appendChild(row);
     })
 }
@@ -59,13 +91,14 @@ const loadUsers = async () => {
 const generateModals = () => {
     const body = document.querySelector('body');
 
-    const modal = document.createElement('div');
-    modal.innerHTML = `
-        <div class="modal">
+    const addModal = document.createElement('div');
+    addModal.innerHTML = `
+    <div class="modal-overlay">
+        <div class="addModal">
             <div class="modal-header">
                  <h2>Añadir usuario</h2>
             </div>
-            <form action="" method="post" id="addModal">
+            <form action="" method="post" id="addModalForm">
                 <div class="modal-body">
     
                     <div>
@@ -82,26 +115,53 @@ const generateModals = () => {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button id="addBtn" class="btn-close">Agregar</button>
-                    <button id="closeAddBtn" class="btn-close">Cerrar</button>
+                    <button id="addBtn" class="btn success">Agregar</button>
+                    <button id="closeAddBtn" class="btn warning">Cerrar</button>
                 </div>
             </form>
         </div>
+    </div>
     `
-
-    modal.setAttribute('id', 'modal');
-    body!.appendChild(modal);
+    const deleteModal = document.createElement('div');
+    deleteModal.innerHTML += `
+    <div class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                 <h2>Eliminar usuario</h2>
+            </div>
+            <form action="" method="post" id="deleteModalForm">
+                <div class="modal-body">
+    
+                    <div>
+                         <p>Estas seguro que quieres eliminar el usuario</p>
+                    </div>
+                    
+                </div>
+                <div class="modal-footer">
+                    <button id="deleteBtn" class="btn danger">Eliminar</button>
+                    <button id="closeDeleteBtn" class="btn warning">Cerrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    `
+    deleteModal.style.display = 'none'
+    addModal.style.display = 'none'
+    addModal.setAttribute('id', 'addModal');
+    deleteModal.setAttribute('id', 'deleteModal');
+    body!.appendChild(addModal);
+    body!.appendChild(deleteModal);
 
     const addUserBtn = document.getElementById('addUserBtn');
 
     addUserBtn!.addEventListener('click', () => {
-        modal.style.display = 'flex';
+        addModal.style.display = 'flex';
     });
 
     const closeBtn = document.getElementById('closeAddBtn');
     closeBtn!.addEventListener('click', () => {
-        const form = document.getElementById('addModal');
-        modal.style.display = 'none';
+        const form = document.getElementById('addModalForm');
+        addModal.style.display = 'none';
         form!.reset();
     });
 
@@ -128,21 +188,51 @@ const generateModals = () => {
             console.error("Error al agregar un usuario:", e);
         }
 
-        const form = document.getElementById('addModal');
-        modal.style.display = 'none';
+        const form = document.getElementById('addModalForm');
+        addModal.style.display = 'none';
         form!.reset();
-        showUsers();
+        await showUsers();
     })
+
+    const closeDeleteBtn = document.getElementById('closeDeleteBtn');
+    closeDeleteBtn!.addEventListener('click', () => {
+
+        closeDeleteBtn!.style.display = 'none';
+
+    });
+
+    const deleteBtn = document.getElementById('deleteBtn');
+    deleteBtn!.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            await deleteUser(selectedUser);
+            console.log("Eliminado con éxito");
+
+            deleteModal.style.display = 'none'
+
+            await showUsers();
+
+        } catch (e) {
+            console.error("Error al eliminar un usuario:", e);
+        }
+    })
+
     window.addEventListener('click', (event) => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
+        if (event.target === addModal) {
+            addModal.style.display = 'none';
+        }
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === deleteModal) {
+            deleteModal.style.display = 'none'
         }
     });
 }
 
 const init = () => {
-    showUsers();
     generateModals()
+    showUsers();
 };
 
 export default init;
