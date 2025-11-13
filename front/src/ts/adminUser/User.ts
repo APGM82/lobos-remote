@@ -1,4 +1,4 @@
-import {getUsers} from './CrudUser.ts'
+import {getUsers, addUser} from './CrudUser.ts'
 
 
 const showUsers = () =>
@@ -22,6 +22,7 @@ const showUsers = () =>
 
 
 const chargeTable = (users: any[]) => {
+    document.getElementById('usersTable')!.innerHTML = ""
     users.forEach((user) => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -55,10 +56,93 @@ const loadUsers = async () => {
     }
 };
 
+const generateModals = () => {
+    const body = document.querySelector('body');
 
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div class="modal">
+            <div class="modal-header">
+                 <h2>Añadir usuario</h2>
+            </div>
+            <form action="" method="post" id="addModal">
+                <div class="modal-body">
+    
+                    <div>
+                         <label for="name">Nombre: </label>
+                        <input type="text" name="name" id="name" required>
+                    </div>
+                    <div>
+                        <label for="nickname">Nickname: </label>
+                        <input type="text" name="nickname" id="nickname" required>  
+                    </div>
+                    <div>
+                        <label for="mail">Correo electronico: </label>
+                        <input type="text" name="mail" id="mail" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="addBtn" class="btn-close">Agregar</button>
+                    <button id="closeAddBtn" class="btn-close">Cerrar</button>
+                </div>
+            </form>
+        </div>
+    `
+
+    modal.setAttribute('id', 'modal');
+    body!.appendChild(modal);
+
+    const addUserBtn = document.getElementById('addUserBtn');
+
+    addUserBtn!.addEventListener('click', () => {
+        modal.style.display = 'flex';
+    });
+
+    const closeBtn = document.getElementById('closeAddBtn');
+    closeBtn!.addEventListener('click', () => {
+        const form = document.getElementById('addModal');
+        modal.style.display = 'none';
+        form!.reset();
+    });
+
+    const addBtn = document.getElementById('addBtn');
+    addBtn!.addEventListener('click', async (event) => {
+        event.preventDefault();
+        const name = document.getElementById('name')!.value
+        const nickname = document.getElementById('nickname')!.value
+        const mail = document.getElementById('mail')!.value
+
+        const data = {
+            "name" : name,
+            "nickname" : nickname,
+            "email" : mail
+        }
+
+        try {
+            const response = await addUser(data);
+
+            const responseData = await response.json();
+            console.log("Agregado con éxito:", responseData);
+
+        } catch (e) {
+            console.error("Error al agregar un usuario:", e);
+        }
+
+        const form = document.getElementById('addModal');
+        modal.style.display = 'none';
+        form!.reset();
+        showUsers();
+    })
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
 
 const init = () => {
-    showUsers()
+    showUsers();
+    generateModals()
 };
 
 export default init;

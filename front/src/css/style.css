@@ -157,6 +157,15 @@ h1 {
 
 }
 
+.success {
+    background-color: #1bd61b;
+    color: #000000;
+}
+
+.success:hover {
+    background-color: #129d12;
+}
+
 .warning {
     background-color: #fdcf1b;
     color: #000000;
@@ -175,4 +184,67 @@ h1 {
 .danger:hover {
     background-color: #b21313;
     color: #CDD6D0;
+}
+
+.modal {
+    max-height: 80vh;
+    min-width: 25vw;
+
+    position: relative; /* importante */
+
+}
+
+.modal-header {
+    position: sticky;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: #AA4465;
+    text-align: start;
+    color: #CDD6D0;
+    padding: 2%;
+    z-index: 10; /* asegura que quede por encima del contenido */
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    padding: 2%;
+    background-color: #CDD6D0;
+}
+
+.modal-body div {
+    margin: 2%;
+}
+.modal-footer {
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    padding: 2%;
+    background-color: #AA4465;
+    text-align: end;
+}
+
+input {
+    width: auto;
+    padding: 5px 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    outline: none;
+    background-color: #f9f9f9;
+    transition: 0.3s;
+}
+
+input:focus {
+    border-color: #AA4465;
+    background-color: #fff;
+    box-shadow: 0 0 5px rgba(170, 68, 101, 0.3);
 }
