@@ -1,6 +1,6 @@
-import {getUsers, addUser, deleteUser} from './CrudUser.ts'
+import {getUsers, addUser, updateUser, deleteUser} from './CrudUser.ts'
 
-let selectedUser = ""
+let selectedUser = 0
 
 const showUsers = () =>
     loadUsers().then(users => {
@@ -29,9 +29,11 @@ const chargeTable = (users: any[]) => {
 
         const tdImage = document.createElement('td');
         tdImage.classList.add('text-center');
+        tdImage.style.width = '20px';
         const userImage = document.createElement('img');
         userImage.src = user.image;
         userImage.alt = user.name;
+        userImage.classList.add('rounded-circle', 'img-fluid');
         tdImage.appendChild(userImage);
         row.appendChild(tdImage);
 
@@ -51,22 +53,34 @@ const chargeTable = (users: any[]) => {
         row.appendChild(tdEmail);
 
         const tdActions = document.createElement('td');
-        tdActions.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center');
+        tdActions.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center', 'h-100');
+
+        const div = document.createElement('div');
+        div.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center', 'h-100');
+        tdActions.appendChild(div);
 
         const editButton = document.createElement('button');
         editButton.classList.add('btn', 'warning');
+        editButton.id = 'deleteUserBtn';
+        editButton.value = user.id;
         editButton.textContent = 'Editar';
-        tdActions.appendChild(editButton);
+        div.appendChild(editButton);
+
+        editButton.addEventListener('click', () => {
+            selectedUser = Number(editButton!.value)
+            const modifyModal = document.getElementById('modifyModal');
+            modifyModal!.style.display = 'flex';
+        })
 
         const deleteButton = document.createElement('button');
         deleteButton.classList.add('btn', 'danger');
         deleteButton.id = 'deleteUserBtn';
         deleteButton.value = user.id;
         deleteButton.textContent = 'Eliminar';
-        tdActions.appendChild(deleteButton);
+        div.appendChild(deleteButton);
 
         deleteButton.addEventListener('click', () => {
-            selectedUser = deleteButton!.value
+            selectedUser = Number(deleteButton!.value)
             const deleteModal = document.getElementById('deleteModal');
             deleteModal!.style.display = 'flex';
         });
@@ -102,8 +116,8 @@ const generateModals = () => {
                 <div class="modal-body">
     
                     <div>
-                         <label for="name">Nombre: </label>
-                        <input type="text" name="name" id="name" required>
+                         <label for="aName">Nombre: </label>
+                        <input type="text" name="aName" id="aName" required>
                     </div>
                     <div>
                         <label for="nickname">Nickname: </label>
@@ -122,6 +136,35 @@ const generateModals = () => {
         </div>
     </div>
     `
+    const modifyModal = document.createElement('div');
+    modifyModal.innerHTML = `
+    <div class="modal-overlay">
+        <div class="modifyModal">
+            <div class="modal-header">
+                 <h2>Modificar usuario</h2>
+            </div>
+            <form action="" method="post" id="modifyModalForm">
+                <div class="modal-body">
+    
+                    <div>
+                        <label for="mName">Nombre: </label>
+                        <input type="text" name="mName" id="mName" value="">
+                    </div>
+                    
+                    <div>
+                        <label for="image">Imagen de perfil: </label>
+                        <input type="file" name="image" id="image" accept="image/jpeg, image/png, image/jpg" value=""/>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="modifyBtn" class="btn success">Modificar</button>
+                    <button id="closeModifyBtn" class="btn warning">Cerrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    `
+
     const deleteModal = document.createElement('div');
     deleteModal.innerHTML += `
     <div class="modal-overlay">
@@ -145,11 +188,15 @@ const generateModals = () => {
         </div>
     </div>
     `
-    deleteModal.style.display = 'none'
+
     addModal.style.display = 'none'
+    modifyModal.style.display = 'none'
+    deleteModal.style.display = 'none'
     addModal.setAttribute('id', 'addModal');
+    modifyModal.setAttribute('id', 'modifyModal');
     deleteModal.setAttribute('id', 'deleteModal');
     body!.appendChild(addModal);
+    body!.appendChild(modifyModal);
     body!.appendChild(deleteModal);
 
     const addUserBtn = document.getElementById('addUserBtn');
@@ -168,7 +215,7 @@ const generateModals = () => {
     const addBtn = document.getElementById('addBtn');
     addBtn!.addEventListener('click', async (event) => {
         event.preventDefault();
-        const name = document.getElementById('name')!.value
+        const name = document.getElementById('aName')!.value
         const nickname = document.getElementById('nickname')!.value
         const mail = document.getElementById('mail')!.value
 
@@ -194,12 +241,52 @@ const generateModals = () => {
         await showUsers();
     })
 
-    const closeDeleteBtn = document.getElementById('closeDeleteBtn');
-    closeDeleteBtn!.addEventListener('click', () => {
 
-        closeDeleteBtn!.style.display = 'none';
+    const closeModifyBtn = document.getElementById('closeModifyBtn');
+    closeModifyBtn!.addEventListener('click', (e) => {
+        e.preventDefault();
+        const form = document.getElementById('modifyModalForm');
+        modifyModal.style.display = 'none';
+        form!.reset()
+    })
+
+    const modifyBtn = document.getElementById('modifyBtn');
+    modifyBtn!.addEventListener('click', async (e) => {
+        e.preventDefault()
+        const formData = new FormData();
+        const name = document.getElementById('mName')!.value
+        console.log(name)
+        formData.append('name', name);
+        const imageInput = document.getElementById('image');
+        if (imageInput!.files.length > 0) {
+            formData.append('image', imageInput!.files[0]);
+        }
+
+        for (const [key, value] of formData.entries()) {
+            console.log(key, value);
+        }
+
+        try {
+            const response = await updateUser(selectedUser, formData);
+
+            const responseData = await response.json();
+            console.log("Agregado con éxito:", responseData);
+
+            await showUsers();
+        } catch (e) {
+            console.error("Error al modificar el usuario:", e);
+        }
+
+    })
+
+    const closeDeleteBtn = document.getElementById('closeDeleteBtn');
+    closeDeleteBtn!.addEventListener('click', (e) => {
+        e.preventDefault();
+        deleteModal!.style.display = 'none';
 
     });
+
+
 
     const deleteBtn = document.getElementById('deleteBtn');
     deleteBtn!.addEventListener('click', async (e) => {
@@ -220,6 +307,12 @@ const generateModals = () => {
     window.addEventListener('click', (event) => {
         if (event.target === addModal) {
             addModal.style.display = 'none';
+        }
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === modifyModal) {
+            modifyModal.style.display = 'none';
         }
     });
 

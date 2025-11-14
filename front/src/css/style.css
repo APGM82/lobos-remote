@@ -259,3 +259,12 @@ input:focus {
     background-color: #fff;
     box-shadow: 0 0 5px rgba(170, 68, 101, 0.3);
 }
+
+.rounded-circle {
+    border-radius: 50%;
+}
+
+.img-fluid {
+    max-width: 50%;
+    height: auto;
+}

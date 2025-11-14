@@ -1,14 +1,15 @@
 <?php
-
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 
 class UserController extends Controller
@@ -72,6 +73,66 @@ class UserController extends Controller
 
     }
 
+    public function update(Request $request, $id) {
+        $input = $request->all();
+
+
+        $rules = [
+            'name' => 'nullable|string|max:20',
+            'image' => 'nullable|file|image|mimes:jpeg,png,jpg|max:2048',
+        ];
+        $messages = [
+            'max' => 'El campo :attribute no debe exceder el tamaño máximo permitido.',
+            'string' => 'El campo :attribute debe ser una cadena de caracteres.',
+            'image' => 'El campo :attribute debe ser una imagen.',
+            'mimes' => 'El campo :attribute debe ser una imagen.',
+
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
+        if($validator->fails()){
+            return response()->json($validator->errors(),422);
+        }
+
+        try {
+            $user = User::find($id);
+
+            if (is_null($user)) {
+                return response()->json(["success"=>false, "message"=>"User not found!"], 400);
+            }
+
+            if (isset($input['name']) && $input['name'] !== "" && $input['name'] != $user->name) {
+                $user->name = $input['name'];
+            }
+
+            if ($request->hasFile('image') && $request->file('image')->isValid()) {
+                try {
+                    $file = $request->file('image');
+
+                    $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                    $extension = $file->getClientOriginalExtension();
+
+                    $filename = uniqid('img_') . '_' . Str::slug($originalName) . '.' . $extension;
+
+                    $uploadedFilePath = Storage::disk('cloudinary')->putFileAs('laravel', $file, $filename);
+
+                    $url = Storage::disk('cloudinary')->url($uploadedFilePath);
+
+                    $user->image = $url;
+
+                } catch (Exception $e) {
+                    return response()->json(['error' => 'Error al subir la imagen: ' . $e->getMessage()], 500);
+                }
+            }
+
+            $user->save();
+
+            return response()->json(["success"=>true, "message"=>"User successfully updated!"], 200);
+
+        } catch (Exception $e) {
+            return response()->json(["success"=>false, "data" =>$e, "message"=>"Error in updating user!"], 400);
+        }
+    }
     public function destroy($id) {
         $user = User::find($id);
 
