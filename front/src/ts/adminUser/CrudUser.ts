@@ -16,6 +16,20 @@ const getUsers = async () => {
     }
 }
 
+const getfilterUsers = async (nickname : String) => {
+    try {
+        return await fetch(`${apiUrl}/${nickname}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                //'Authorization': `Bearer ${token}`
+            }
+        });
+    } catch (error) {
+        throw error
+    }
+}
+
 const addUser = async (data : any) => {
     try {
         return await fetch(apiUrl, {
@@ -65,6 +79,7 @@ const deleteUser = async (id : number) => {
 
 export {
     getUsers,
+    getfilterUsers,
     addUser,
     updateUser,
     deleteUser

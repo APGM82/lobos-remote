@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use Exception;
@@ -16,6 +17,12 @@ class UserController extends Controller
 {
     public function index() {
         $users = User::all();
+
+        return response()->json(["success" => true, "data"=>$users, "massage" => "Users retrieved successfully."], 200);
+    }
+
+    public function show($nickname){
+        $users = User::where('nickname', 'like', "%$nickname%")->get();
 
         return response()->json(["success" => true, "data"=>$users, "massage" => "Users retrieved successfully."], 200);
     }
@@ -44,12 +51,14 @@ class UserController extends Controller
 
         $password = $this->generatePassword();
 
+        $input['image'] = "https://res.cloudinary.com/dkwl53odf/image/upload/v1763383386/profile_jkjkq7.png";
+
         $data = [
             "nickname" => $input['nickname'],
             "password" => $password
         ];
 
-        $input['password'] = bcrypt($password);
+        $input['password'] = Hash::make($password);
         try {
 
 

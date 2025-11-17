@@ -25,6 +25,12 @@ table th {
 
 }
 
+td {
+    border-collapse: collapse;
+    border: 2px solid #ddd;
+}
+
+
 td img {
     width: auto;
 }
@@ -36,7 +42,7 @@ td img {
 
 }
 
-#modal {
+.modal {
     display: none;
     position: fixed;
     inset: 0;
@@ -62,11 +68,6 @@ button {
     cursor: pointer;
 }
 
-.btn-open {
-    background-color: #007bff;
-    color: white;
-}
-
 .btn-close {
     background-color: #dc3545;
     color: white;
@@ -74,4 +75,17 @@ button {
 
 .btn-close:hover {
     background-color: #c82333;
+}
+
+.filter {
+    display: block;
+    margin-bottom: 10px;
+    width: 75%;
+    padding: 5px;
+}
+
+.filter-container {
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: row;
 }
