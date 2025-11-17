@@ -27,7 +27,7 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'nickname' => fake()->unique()->userName(),
             'email' => fake()->unique()->safeEmail(),
-            'image' => 'public/assets/users/default.png',
+            'image' => 'https://res.cloudinary.com/dkwl53odf/image/upload/v1763383386/profile_jkjkq7.png',
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),

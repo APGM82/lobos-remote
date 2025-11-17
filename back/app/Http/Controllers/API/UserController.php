@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use Exception;
@@ -51,7 +52,7 @@ class UserController extends Controller
             "password" => $password
         ];
 
-        $input['password'] = bcrypt($password);
+        $input['password'] = Hash::make($password);
         try {
 
 
