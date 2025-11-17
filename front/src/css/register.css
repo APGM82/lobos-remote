@@ -1,0 +1,140 @@
+#registerContainer {
+    width: 90%;
+    max-width: 500px;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: #CDD6D0;
+    margin: 1%;
+    padding: 1.5%;
+    border-radius: 10px;
+}
+
+.title {
+    text-align: center;
+    display: block;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.title h1 {
+    margin: 10px 0;
+    font-size: 24px;
+}
+
+#registerForm {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.form-group {
+    width: 80%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: normal;
+    color: #333;
+}
+
+.form-group input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: white;
+}
+
+.form-group input::placeholder {
+    color: #999;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #AA4465;
+}
+
+.form-group input.error {
+    border-color: #fd1b1b;
+    border-width: 2px;
+}
+
+.form-group input.error:focus {
+    border-color: #fd1b1b;
+    box-shadow: 0 0 5px rgba(253, 27, 27, 0.3);
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    margin: 3px;
+    width: 80%;
+}
+
+.btn-primary {
+    background-color: #333;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #555;
+}
+
+.links {
+    width: 80%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.links a {
+    color: #333;
+    text-decoration: underline;
+    font-size: 14px;
+}
+
+.links a:hover {
+    color: #AA4465;
+}
+
+.links a.btn {
+    text-decoration: none;
+    text-align: center;
+}
+
+#registerError {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 15px;
+    width: 90%;
+    max-width: 500px;
+}
+
+#registerError h1 {
+    font-size: 16px;
+    margin: 0 0 5px 0;
+    font-weight: bold;
+}
+
+#registerError p {
+    margin: 0;
+    font-size: 14px;
+}
+

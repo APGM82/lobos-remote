@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro - Lobos de Castronegro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/register.css">
+</head>
+<body>
+    <header>
+        <div>
+            <div class="header">
+                <a href="../../index.html">
+                    <img alt="Inicio" src="../public/logo.png">
+                    <h1> Lobos de Castronegro</h1>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div id="registerContainer">
+            <div id="registerError" class="error disabled">
+                <h1>Ha sucedido un error</h1>
+                <p id="errorText">Error al registrar usuario.</p>
+            </div>
+            <div class="title">
+                <h1>Registro</h1>
+            </div>
+            
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="name">Nombre</label>
+                    <input type="text" id="name" name="name" placeholder="Ingrese su nombre" maxlength="255" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="nickname">Nickname</label>
+                    <input type="text" id="nickname" name="nickname" placeholder="Ingrese su nickname" maxlength="255" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Correo electrónico</label>
+                    <input type="email" id="email" name="email" placeholder="Ingrese su correo" maxlength="255" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" placeholder="Ingrese su contraseña" minlength="8" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="passwordConfirmation">Confirmar contraseña</label>
+                    <input type="password" id="passwordConfirmation" name="passwordConfirmation" placeholder="Confirme su contraseña" minlength="8" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Registrarse</button>
+                
+                <div class="links">
+                    <a href="login.html">¿Ya tienes cuenta? Inicia sesión</a>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <div>
+            <p>© 2024 Lobos de Castronegro. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script type="module" src="../ts/register.ts"></script>
+</body>
+</html>
+
