@@ -11,9 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Funcionalidad no disponible aún');
     });
 
+    // Manejar el botón de crear cuenta
     document.getElementById('createAccount')?.addEventListener('click', (e) => {
         e.preventDefault();
-        alert('Funcionalidad no disponible aún');
+        window.location.href = 'register.html';
     });
 
     // Manejar el envío del formulario
