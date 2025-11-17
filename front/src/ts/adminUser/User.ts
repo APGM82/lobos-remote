@@ -1,6 +1,7 @@
-import {getUsers, addUser, updateUser, deleteUser} from './CrudUser.ts'
+import {getUsers,getfilterUsers, addUser, updateUser, deleteUser} from './CrudUser.ts'
 
 let selectedUser = 0
+const filter = (document.getElementById('filter') as HTMLInputElement)!;
 
 const showUsers = () =>
     loadUsers().then(users => {
@@ -21,15 +22,17 @@ const showUsers = () =>
         }
     });
 
-
+filter.addEventListener('keyup', async () => {
+    const users = await filterUsers(filter.value)
+    chargeTable(users)
+})
 const chargeTable = (users: any[]) => {
     document.getElementById('usersTable')!.innerHTML = ""
     users.forEach((user) => {
         const row = document.createElement('tr');
 
         const tdImage = document.createElement('td');
-        tdImage.classList.add('text-center');
-        tdImage.style.width = '20px';
+        tdImage.classList.add('text-center', 'w-10');
         const userImage = document.createElement('img');
         console.log(user.image);
         userImage.src = user.image;
@@ -102,6 +105,17 @@ const loadUsers = async () => {
         return [];
     }
 };
+
+const filterUsers = async (nickname : String) => {
+    try {
+        const response = await getfilterUsers(nickname);
+        const responseData = await response.json();
+        return responseData.data;
+    } catch(e) {
+        console.error("Error al filtrar los usuarios:", e);
+        return [];
+    }
+}
 
 const generateModals = () => {
     const body = document.querySelector('body');

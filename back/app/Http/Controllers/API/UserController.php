@@ -21,6 +21,12 @@ class UserController extends Controller
         return response()->json(["success" => true, "data"=>$users, "massage" => "Users retrieved successfully."], 200);
     }
 
+    public function show($nickname){
+        $users = User::where('nickname', 'like', "%$nickname%")->get();
+
+        return response()->json(["success" => true, "data"=>$users, "massage" => "Users retrieved successfully."], 200);
+    }
+
     public function store(Request $request) {
         $input = $request->all();
         $rules = [
