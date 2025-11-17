@@ -34,7 +34,6 @@ const chargeTable = (users: any[]) => {
         const tdImage = document.createElement('td');
         tdImage.classList.add('text-center', 'w-10');
         const userImage = document.createElement('img');
-        console.log(user.image);
         userImage.src = user.image;
         userImage.alt = user.name;
         userImage.classList.add('rounded-circle', 'img-fluid');
@@ -222,7 +221,7 @@ const generateModals = () => {
 
     const closeBtn = document.getElementById('closeAddBtn');
     closeBtn!.addEventListener('click', () => {
-        const form = (document.getElementById('addModalForm') as HTMLFormElement);
+        const form = document.getElementById('addModalForm') as HTMLFormElement;
         addModal.style.display = 'none';
         form!.reset();
     });
@@ -250,7 +249,7 @@ const generateModals = () => {
             console.error("Error al agregar un usuario:", e);
         }
 
-        const form = (document.getElementById('addModalForm') as HTMLFormElement);
+        const form = document.getElementById('addModalForm') as HTMLFormElement;
         addModal.style.display = 'none';
         form!.reset();
         await showUsers();
@@ -260,7 +259,7 @@ const generateModals = () => {
     const closeModifyBtn = document.getElementById('closeModifyBtn');
     closeModifyBtn!.addEventListener('click', (e) => {
         e.preventDefault();
-        const form = (document.getElementById('modifyModalForm') as HTMLFormElement);
+        const form = document.getElementById('modifyModalForm') as HTMLFormElement;
         modifyModal.style.display = 'none';
         form!.reset()
     })
