@@ -44,6 +44,8 @@ class UserController extends Controller
 
         $password = $this->generatePassword();
 
+        $input['image'] = "https://res.cloudinary.com/dkwl53odf/image/upload/v1763383386/profile_jkjkq7.png";
+
         $data = [
             "nickname" => $input['nickname'],
             "password" => $password

@@ -31,6 +31,7 @@ const chargeTable = (users: any[]) => {
         tdImage.classList.add('text-center');
         tdImage.style.width = '20px';
         const userImage = document.createElement('img');
+        console.log(user.image);
         userImage.src = user.image;
         userImage.alt = user.name;
         userImage.classList.add('rounded-circle', 'img-fluid');
@@ -207,7 +208,7 @@ const generateModals = () => {
 
     const closeBtn = document.getElementById('closeAddBtn');
     closeBtn!.addEventListener('click', () => {
-        const form = document.getElementById('addModalForm');
+        const form = (document.getElementById('addModalForm') as HTMLFormElement);
         addModal.style.display = 'none';
         form!.reset();
     });
@@ -215,9 +216,9 @@ const generateModals = () => {
     const addBtn = document.getElementById('addBtn');
     addBtn!.addEventListener('click', async (event) => {
         event.preventDefault();
-        const name = document.getElementById('aName')!.value
-        const nickname = document.getElementById('nickname')!.value
-        const mail = document.getElementById('mail')!.value
+        const name = (document.getElementById('aName') as HTMLInputElement)!.value
+        const nickname = (document.getElementById('nickname') as HTMLInputElement)!.value
+        const mail = (document.getElementById('mail') as HTMLInputElement)!.value
 
         const data = {
             "name" : name,
@@ -235,7 +236,7 @@ const generateModals = () => {
             console.error("Error al agregar un usuario:", e);
         }
 
-        const form = document.getElementById('addModalForm');
+        const form = (document.getElementById('addModalForm') as HTMLFormElement);
         addModal.style.display = 'none';
         form!.reset();
         await showUsers();
@@ -245,7 +246,7 @@ const generateModals = () => {
     const closeModifyBtn = document.getElementById('closeModifyBtn');
     closeModifyBtn!.addEventListener('click', (e) => {
         e.preventDefault();
-        const form = document.getElementById('modifyModalForm');
+        const form = (document.getElementById('modifyModalForm') as HTMLFormElement);
         modifyModal.style.display = 'none';
         form!.reset()
     })
@@ -254,11 +255,10 @@ const generateModals = () => {
     modifyBtn!.addEventListener('click', async (e) => {
         e.preventDefault()
         const formData = new FormData();
-        const name = document.getElementById('mName')!.value
-        console.log(name)
+        const name = (document.getElementById('mName') as HTMLInputElement)!.value
         formData.append('name', name);
-        const imageInput = document.getElementById('image');
-        if (imageInput!.files.length > 0) {
+        const imageInput = document.getElementById('image') as HTMLInputElement;
+        if (imageInput!.files && imageInput!.files.length > 0) {
             formData.append('image', imageInput!.files[0]);
         }
 
