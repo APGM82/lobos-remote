@@ -7,16 +7,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copiar todo el código
-COPY . .
+# Copiar entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Construir la app
-RUN npm run build
-
-# Servir con un servidor ligero (por ejemplo, serve)
-RUN npm install -g serve
-
+# Exponer puerto
 EXPOSE 5173
 
-CMD ["serve", "-s", "dist", "-l", "5173"]
+ENTRYPOINT ["/entrypoint.sh"]
 
