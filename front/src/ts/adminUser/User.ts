@@ -275,10 +275,6 @@ const generateModals = () => {
             formData.append('image', imageInput!.files[0]);
         }
 
-        for (const [key, value] of formData.entries()) {
-            console.log(key, value);
-        }
-
         try {
             const response = await updateUser(selectedUser, formData);
 
@@ -290,6 +286,10 @@ const generateModals = () => {
             console.error("Error al modificar el usuario:", e);
         }
 
+        const form = document.getElementById('modifyModalForm') as HTMLFormElement;
+        modifyModal.style.display = 'none';
+        form!.reset();
+        await showUsers();
     })
 
     const closeDeleteBtn = document.getElementById('closeDeleteBtn');
