@@ -17,7 +17,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     
     // Rutas de usuarios (requiere autenticación)
     Route::middleware(['user'])->group(function () {
-       //aqui por si se necesita alguna ruta
+       //aqui por si se necesita alguna ruta 
     });
     
     // Rutas solo para admins
