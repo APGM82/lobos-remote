@@ -20,6 +20,7 @@ RUN rm -f composer.lock
 
 # Instalar dependencias de PHP
 RUN composer install --no-dev --optimize-autoloader
+RUN composer update
 
 # Dar permisos de ejecución al entrypoint (compatible con Windows)
 
