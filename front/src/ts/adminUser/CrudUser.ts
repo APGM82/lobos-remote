@@ -1,14 +1,14 @@
 import routes from "../routes.ts"
 
 const apiUrl = routes.usersUrl
-
+const token = sessionStorage.getItem('token')
 const getUsers = async () => {
     try {
         return await fetch(apiUrl, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                //'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`
             }
         });
     } catch (error) {
@@ -22,7 +22,7 @@ const getfilterUsers = async (nickname : String) => {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                //'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`
             }
         });
     } catch (error) {
@@ -37,7 +37,7 @@ const addUser = async (data : any) => {
             body: JSON.stringify(data),
             headers: {
                 'Content-Type': 'application/json',
-                //'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`
             }
         });
     } catch (error) {
@@ -53,7 +53,7 @@ const updateUser = async (id : number, formData : FormData) => {
             body: formData,
             headers: {
 
-                //'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`
             }
         });
     } catch (error) {
@@ -68,7 +68,7 @@ const deleteUser = async (id : number) => {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
-                //'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`
             }
         });
     } catch (error) {
