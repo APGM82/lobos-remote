@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# Instalar dependencias de Composer (siempre para asegurar que estén actualizadas)
+# Instalar dependencias de Composer siempre para evitar problemas de compatibilidad
 echo "Instalando dependencias de Composer..."
-composer install --no-dev --optimize-autoloader
+composer install --no-interaction --optimize-autoloader
 
 # Copiar .env.example a .env si no existe .env
 if [ ! -f ".env" ]; then
@@ -34,4 +34,3 @@ php artisan db:seed --force
 
 echo "Iniciando servidor de laravel puerto 8000"
 exec php artisan serve --host=0.0.0.0 --port=8000
-

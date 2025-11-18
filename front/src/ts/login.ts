@@ -1,4 +1,11 @@
+import { redirectIfAuthenticated, saveSession } from './auth.ts';
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Verificar si el usuario ya está autenticado (redirigir al perfil si lo está)
+    if (!redirectIfAuthenticated()) {
+        return;
+    }
+
     const loginForm = document.getElementById('loginForm') as HTMLFormElement;
     const emailInput = document.getElementById('email') as HTMLInputElement;
     const passwordInput = document.getElementById('password') as HTMLInputElement;
@@ -52,8 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data.success) {
                 // Guardar información del usuario en sessionStorage
-                sessionStorage.setItem('user', JSON.stringify(data.data.user));
-                sessionStorage.setItem('token', data.data.token || '');
+                const userData = {
+                    id: data.data.id,
+                    name: data.data.name,
+                    email: data.data.email
+                };
+                saveSession(data.data.token || '', userData);
                 
                 // Redirigir según el rol del usuario
                 const roles = data.data.roles;
@@ -62,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isAdmin) {
                     window.location.href = 'adminUser.html';
                 } else {
-                    window.location.href = '../../index.html';
+                    window.location.href = 'profile.html';
                 }
             } else {
                 showError(data.message || 'Credenciales incorrectas');

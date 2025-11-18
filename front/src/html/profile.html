@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfil - Lobos de Castronegro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/profile.css">
+</head>
+<body>
+    <header>
+        <div>
+            <div class="header">
+                <a href="../../index.html">
+                    <img alt="Inicio" src="../public/logo.png">
+                    <h1> Lobos de Castronegro</h1>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div id="profileError" class="error disabled">
+            <h1>Ha sucedido un error</h1>
+            <p id="errorText">Error al cargar el perfil.</p>
+        </div>
+
+        <div id="profileContainer">
+            <div class="title">
+                <h1>Perfil</h1>
+            </div>
+
+            <div class="profile-content">
+                <div class="profile-image-container">
+                    <img id="profileImage" alt="Imagen de perfil" class="profile-image">
+                    <input type="file" id="imageInput" accept="image/jpeg,image/png,image/jpg" style="display: none;">
+                </div>
+
+                <div class="profile-info">
+                    <div class="info-item">
+                        <label>Nickname:</label>
+                        <span id="nicknameValue" class="info-value">-</span>
+                    </div>
+
+                    <div class="info-item">
+                        <label>Nombre:</label>
+                        <input type="text" id="nameInput" class="info-input disabled" maxlength="255" disabled>
+                        <span id="nameValue" class="info-value">-</span>
+                    </div>
+
+                    <div class="info-item">
+                        <label>Correo electrónico:</label>
+                        <span id="emailValue" class="info-value">-</span>
+                    </div>
+
+                    <div class="info-item">
+                        <label>Rol:</label>
+                        <span id="roleValue" class="info-value">-</span>
+                    </div>
+
+                    <div class="info-item">
+                        <label>Password:</label>
+                        <span id="passwordValue" class="info-value">************</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <button type="button" id="editImageBtn" class="btn btn-primary">Cambiar imagen</button>
+                <button type="button" id="editPasswordBtn" class="btn btn-primary">Editar Pass</button>
+                <button type="button" id="editNameBtn" class="btn btn-primary">Editar perfil</button>
+            </div>
+
+            <!-- Modal para cambiar contraseña -->
+            <div id="passwordModal" class="modal-overlay disabled">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h2>Cambiar contraseña</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="currentPassword">Contraseña actual:</label>
+                            <input type="password" id="currentPassword" placeholder="Ingrese su contraseña actual" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">Nueva contraseña:</label>
+                            <input type="password" id="newPassword" placeholder="Ingrese nueva contraseña" minlength="8" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirmar contraseña:</label>
+                            <input type="password" id="confirmPassword" placeholder="Confirme nueva contraseña" minlength="8" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="cancelPasswordBtn" class="btn btn-secondary">Cancelar</button>
+                        <button type="button" id="savePasswordBtn" class="btn btn-primary">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div>
+            <div>
+                <p> Copyright © 2025 · Los Hombres Lobo de Castronegro</p>
+            </div>
+            <div class="contenedor">
+                Contacto: los4mosqueperros@gmail.com
+            </div>
+            <div class="contenedor">
+                <div class="contenedor-redes">
+                    <a href="https://www.facebook.com/?locale=es_ES">
+                        <img src="https://img.icons8.com/?size=100&id=87311&format=png&color=CDD6D0" alt="Facebook" class="redes">
+                    </a>
+                </div>
+                <div class="contenedor-redes">
+                    <a href="https://www.instagram.com/?hl=es">
+                        <img src="https://img.icons8.com/?size=100&id=TRVfmt9zm5vL&format=png&color=CDD6D0" alt="Instagram" class="redes">
+                    </a>
+                </div>
+                <div class="contenedor-redes">
+                    <a href="https://x.com/?lang=es">
+                        <img src="https://img.icons8.com/?size=100&id=fJp7hepMryiw&format=png&color=CDD6D0" alt="Twitter" class="redes">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script type="module" src="../ts/profile.ts"></script>
+</body>
+</html>
+
