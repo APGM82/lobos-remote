@@ -22,19 +22,20 @@ table th {
     text-align: center;
     background-color: #AA4465;
     color: #CDD6D0;
-
+    border-collapse: collapse;
+    border: 2px solid #000000;
 }
 
 td {
     border-collapse: collapse;
-    border: 2px solid #ddd;
+    border: 2px solid #000000;
+    background-color: #FFFFFF;
 }
-
 
 td img {
     width: 75px;
     height: 75px;
-    border: 3px solid #CDD6D0;
+    border: 3px solid #000000;
     border-radius: 50%;
 }
 
@@ -54,7 +55,6 @@ td img {
     align-items: center;
 }
 
-/* Caja blanca del modal */
 .modal-content {
     background: white;
     padding: 20px;
@@ -63,6 +63,13 @@ td img {
     width: 300px;
 }
 
+.bg-white {
+    background-color: #FFFFFF !important;
+}
+
+.border-none {
+    border: none !important;
+}
 button {
     margin: 5px;
     padding: 8px 12px;

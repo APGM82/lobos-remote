@@ -313,28 +313,6 @@
     }
 }
 
-/* Footer Styles */
-footer {
-    z-index: 1000; /* Z-index alto para que esté siempre por encima de las imágenes orbitales */
-    background: #AA4465; /* Cambiar a mismo color que style.css para consistencia */
-}
-
-footer .contenedor-redes {
-    width: 40px;
-    height: 40px;
-}
-
-footer .redes {
-    width: 100%;
-    height: 100%;
-    padding: 0;
-    object-fit: contain;
-}
-
-footer p {
-    margin: 0;
-    font-size: 14px;
-}
 
 /* Responsive Design - Mobile */
 @media (max-width: 768px) {

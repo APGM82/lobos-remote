@@ -18,7 +18,7 @@ const generateHeader = async () => {
             const profileImage = document.createElement('img');
             profileImage.src = data.user.image;
             profileImage.alt = data.user.name;
-            profileImage.classList.add('rounded-circle', 'profile-image');
+            profileImage.classList.add('rounded-circle', 'profile-image-header');
 
             const menu = document.createElement('div');
             menu.classList.add("drop-menu")

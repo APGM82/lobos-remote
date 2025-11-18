@@ -59,7 +59,7 @@ const chargeTable = (users: any[]) => {
         tdActions.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center', 'h-100');
 
         const div = document.createElement('div');
-        div.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center', 'h-100');
+        div.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center', 'h-100', 'bg-white', 'border-none');
         tdActions.appendChild(div);
 
         const editButton = document.createElement('button');
