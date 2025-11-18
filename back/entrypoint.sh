@@ -1,16 +1,8 @@
 #!/bin/sh
 
-<<<<<<< Updated upstream
-# Instalar dependencias de Composer (siempre para asegurar que estén actualizadas)
+# Instalar dependencias de Composer siempre para evitar problemas de compatibilidad
 echo "Instalando dependencias de Composer..."
-composer install --no-dev --optimize-autoloader
-=======
-# Instalar dependencias de Composer siempre para evitar problemas de compatiblidad
-
-  echo "Instalando dependencias de Composer..."
-  composer install --no-dev --optimize-autoloader
-
->>>>>>> Stashed changes
+composer install --no-interaction --optimize-autoloader
 
 # Copiar .env.example a .env si no existe .env
 if [ ! -f ".env" ]; then
@@ -38,15 +30,7 @@ echo "Base de datos lista, ejecutando migraciones..."
 php artisan migrate --force
 
 echo "Ejecutando seeders..."
-<<<<<<< Updated upstream
 php artisan db:seed --force
 
 echo "Iniciando servidor de laravel puerto 8000"
 exec php artisan serve --host=0.0.0.0 --port=8000
-=======
-php artisan db:seed --force 
-
-echo "Iniciando servidor de laravel puerto 8000"
-exec php artisan serve --host=0.0.0.0 --port=8000 
->>>>>>> Stashed changes
-
