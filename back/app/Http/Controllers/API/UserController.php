@@ -27,6 +27,17 @@ class UserController extends Controller
         return response()->json(["success" => true, "data"=>$users, "massage" => "Users retrieved successfully."], 200);
     }
 
+    public function showByToken (Request $request) {
+        $user = $request->user();
+
+        $role = $user->roles;
+        $data = [
+            "user" => $user,
+            "role" => $role,
+        ];
+        return response()->json(["success" => true, "data"=>$data], 200);
+    }
+
     public function store(Request $request) {
         $input = $request->all();
         $rules = [

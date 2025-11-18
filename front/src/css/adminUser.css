@@ -32,7 +32,10 @@ td {
 
 
 td img {
-    width: auto;
+    width: 75px;
+    height: 75px;
+    border: 3px solid #CDD6D0;
+    border-radius: 50%;
 }
 
 .title {

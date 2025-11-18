@@ -14,12 +14,12 @@ Route::post('login', [AuthController::class, 'login']);
 Route::middleware(['auth:sanctum'])->group(function () {
     // Logout
     Route::post('logout', [AuthController::class, 'logout']);
-    
+    Route::get('userToken', [UserController::class, 'showByToken']);
     // Rutas de usuarios (requiere autenticación)
     Route::middleware(['user'])->group(function () {
-       //aqui por si se necesita alguna ruta 
+       //aqui por si se necesita alguna ruta
     });
-    
+
     // Rutas solo para admins
     Route::middleware(['admin'])->group(function () {
         Route::get('/user', [UserController::class, 'index']);

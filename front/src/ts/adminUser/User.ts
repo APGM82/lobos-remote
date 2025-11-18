@@ -1,4 +1,4 @@
-import {getUsers,getfilterUsers, addUser, updateUser, deleteUser} from './CrudUser.ts'
+import {getUsers,getFilterUsers, addUser, updateUser, deleteUser} from './CrudUser.ts'
 
 let selectedUser = 0
 const filter = (document.getElementById('filter') as HTMLInputElement)!;
@@ -36,7 +36,7 @@ const chargeTable = (users: any[]) => {
         const userImage = document.createElement('img');
         userImage.src = user.image;
         userImage.alt = user.name;
-        userImage.classList.add('rounded-circle', 'img-fluid');
+        userImage.classList.add('rounded-circle');
         tdImage.appendChild(userImage);
         row.appendChild(tdImage);
 
@@ -107,7 +107,7 @@ const loadUsers = async () => {
 
 const filterUsers = async (nickname : String) => {
     try {
-        const response = await getfilterUsers(nickname);
+        const response = await getFilterUsers(nickname);
         const responseData = await response.json();
         return responseData.data;
     } catch(e) {
