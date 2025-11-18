@@ -1,11 +1,11 @@
 <?php
 namespace App\Http\Controllers\API;
-
+use Exception;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
-use Exception;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -165,6 +165,192 @@ class UserController extends Controller
             return response()->json(["success"=>true, "message"=>"User successfully removed!"], 200);
         } catch (Exception $e) {
             return response()->json(["success"=>false, "data" =>$e, "message"=>"Error in removing user!"], 400);
+        }
+    }
+
+    // Obtener perfil del usuario autenticado
+    public function profile(Request $request)
+    {
+        $user = $request->user();
+        
+        if (is_null($user)) {
+            return response()->json(["success" => false, "message" => "Usuario no autenticado"], 401);
+        }
+
+        // Cargar roles del usuario con los campos necesarios
+        $user->load('roles:id,name');
+        
+        // Si el usuario no tiene roles, asignar el rol 'user' por defecto
+        if ($user->roles->isEmpty()) {
+            $userRole = Role::where('name', 'user')->first();
+            if ($userRole) {
+                $user->roles()->attach($userRole->id);
+                // Recargar roles después de asignar
+                $user->load('roles:id,name');
+            }
+        }
+        
+        // Obtener roles formateados
+        $roles = $user->roles;
+
+        return response()->json([
+            "success" => true,
+            "data" => [
+                "id" => $user->id,
+                "name" => $user->name,
+                "nickname" => $user->nickname,
+                "email" => $user->email,
+                "image" => $user->image,
+                "roles" => $roles
+            ],
+            "message" => "Perfil obtenido correctamente"
+        ], 200);
+    }
+
+    // Actualizar imagen de perfil
+    public function updateImage(Request $request)
+    {
+        $rules = [
+            'image' => 'required|file|image|mimes:jpeg,png,jpg|max:2048',
+        ];
+        
+        $messages = [
+            'required' => 'El campo :attribute es obligatorio.',
+            'image' => 'El campo :attribute debe ser una imagen.',
+            'mimes' => 'El campo :attribute debe ser una imagen válida (jpeg, png, jpg).',
+            'max' => 'El campo :attribute no debe exceder 2MB.',
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
+        if($validator->fails()){
+            return response()->json($validator->errors(), 422);
+        }
+
+        try {
+            $user = $request->user();
+
+            if (is_null($user)) {
+                return response()->json(["success" => false, "message" => "Usuario no autenticado"], 401);
+            }
+
+            if ($request->hasFile('image') && $request->file('image')->isValid()) {
+                $file = $request->file('image');
+                $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                $extension = $file->getClientOriginalExtension();
+                $filename = uniqid('img_') . '_' . Str::slug($originalName) . '.' . $extension;
+                $uploadedFilePath = Storage::disk('cloudinary')->putFileAs('laravel', $file, $filename);
+                $url = Storage::disk('cloudinary')->url($uploadedFilePath);
+                $user->image = $url;
+                $user->save();
+
+                return response()->json([
+                    "success" => true,
+                    "message" => "Imagen actualizada correctamente",
+                    "data" => ["image" => $user->image]
+                ], 200);
+            }
+
+            return response()->json(["success" => false, "message" => "Error al subir la imagen"], 400);
+
+        } catch (Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Error al actualizar la imagen: " . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Actualizar nombre del usuario
+    public function updateName(Request $request)
+    {
+        $rules = [
+            'name' => 'required|string|max:255',
+        ];
+        
+        $messages = [
+            'required' => 'El campo :attribute es obligatorio.',
+            'string' => 'El campo :attribute debe ser una cadena de caracteres.',
+            'max' => 'El campo :attribute no debe exceder 255 caracteres.',
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
+        if($validator->fails()){
+            return response()->json($validator->errors(), 422);
+        }
+
+        try {
+            $user = $request->user();
+
+            if (is_null($user)) {
+                return response()->json(["success" => false, "message" => "Usuario no autenticado"], 401);
+            }
+
+            $user->name = $request->name;
+            $user->save();
+
+            return response()->json([
+                "success" => true,
+                "message" => "Nombre actualizado correctamente",
+                "data" => ["name" => $user->name]
+            ], 200);
+
+        } catch (Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Error al actualizar el nombre: " . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Actualizar contraseña del usuario
+    public function updatePassword(Request $request)
+    {
+        $rules = [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8',
+            'new_password_confirmation' => 'required|string|same:new_password',
+        ];
+        
+        $messages = [
+            'required' => 'El campo :attribute es obligatorio.',
+            'min' => 'La nueva contraseña debe tener al menos 8 caracteres.',
+            'same' => 'La confirmación de contraseña no coincide.',
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
+        if($validator->fails()){
+            return response()->json($validator->errors(), 422);
+        }
+
+        try {
+            $user = $request->user();
+
+            if (is_null($user)) {
+                return response()->json(["success" => false, "message" => "Usuario no autenticado"], 401);
+            }
+
+            // Verificar contraseña actual
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "La contraseña actual es incorrecta"
+                ], 422);
+            }
+
+            // Actualizar contraseña
+            $user->password = Hash::make($request->new_password);
+            $user->save();
+
+            return response()->json([
+                "success" => true,
+                "message" => "Contraseña actualizada correctamente"
+            ], 200);
+
+        } catch (Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => "Error al actualizar la contraseña: " . $e->getMessage()
+            ], 500);
         }
     }
 
