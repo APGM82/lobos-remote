@@ -1,0 +1,502 @@
+.home-main {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    padding-top: 60px;
+    padding-bottom: 60px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    background-attachment: fixed;
+    color: #CDD6D0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.landing-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 2rem 4rem;
+    flex: 1;
+    gap: 3rem;
+    flex-wrap: wrap;
+}
+
+.landing-content {
+    flex: 0 1 auto;
+    min-width: 250px;
+    max-width: 500px;
+    height: auto;
+    position: relative;
+    z-index: 10;
+    padding: 1rem;
+    background: rgba(22, 33, 62, 0.6);
+    border-radius: 12px;
+}
+
+.main-title {
+    font-size: 1.5rem;
+    color: #CDD6D0;
+    margin-bottom: 0.3rem;
+    font-weight: 300;
+}
+
+.secondary-title {
+    font-size: 2.5rem;
+    color: #AA4465;
+    margin-bottom: 1rem;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.title-description {
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+    color: #CDD6D0;
+    opacity: 0.9;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn {
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex; /* Cambiar a inline-flex para mejor centrado */
+    align-items: center; /* Centrar verticalmente */
+    justify-content: center; /* Centrar horizontalmente */
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #AA4465 0%, #861657 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(170, 68, 101, 0.4);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: #CDD6D0;
+    border: 2px solid #AA4465;
+}
+
+.btn-secondary:hover {
+    background: #AA4465;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(170, 68, 101, 0.3);
+}
+
+/*Zona de imagen de portada con órbita rotativa*/
+.visual-content {
+    flex: 0 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-width: 500px;
+    padding: 150px 0;
+    position: relative;
+    animation: fadeInRight 1s ease-out;
+}
+
+.main-image {
+    max-width: 280px;
+    max-height: 280px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    z-index: 2;
+    margin: 0;
+}
+
+.main-image:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
+}
+
+.character-images {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: rotateOrbit 60s linear infinite;
+    z-index: 1;
+}
+
+@keyframes rotateOrbit {
+    from {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+.character-img {
+    width: 75px !important;
+    height: 75px !important;
+    object-fit: cover !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.3s ease !important;
+    border: 2px solid rgba(170, 68, 101, 0.6) !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    display: block !important;
+    animation: counterRotate 60s linear infinite !important;
+}
+
+@keyframes counterRotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(-360deg);
+    }
+}
+
+/* Posicionar cada imagen en círculo alrededor del centro - Radio: 280px */
+/* Distribuidas uniformemente cada 45° (360° / 8 imágenes) */
+/* Se pueden añadir mas o menos pero hay que volver a calcular los ángulos y posiciones */
+
+/* Imagen 1: 0° (Derecha) */
+.character-img:nth-child(1) {
+    margin-left: calc(280px - 37.5px) !important;
+    margin-top: -37.5px !important;
+}
+
+/* Imagen 2: 45° (Superior derecha) */
+.character-img:nth-child(2) {
+    margin-left: calc(198px - 37.5px) !important;
+    margin-top: calc(-198px - 37.5px) !important;
+}
+
+/* Imagen 3: 90° (Arriba) */
+.character-img:nth-child(3) {
+    margin-left: -37.5px !important;
+    margin-top: calc(-280px - 37.5px) !important;
+}
+
+/* Imagen 4: 135° (Superior izquierda) */
+.character-img:nth-child(4) {
+    margin-left: calc(-198px - 37.5px) !important;
+    margin-top: calc(-198px - 37.5px) !important;
+}
+
+/* Imagen 5: 180° (Izquierda) */
+.character-img:nth-child(5) {
+    margin-left: calc(-280px - 37.5px) !important;
+    margin-top: -37.5px !important;
+}
+
+/* Imagen 6: 225° (Inferior izquierda) */
+.character-img:nth-child(6) {
+    margin-left: calc(-198px - 37.5px) !important;
+    margin-top: calc(198px - 37.5px) !important;
+}
+
+/* Imagen 7: 270° (Abajo) */
+.character-img:nth-child(7) {
+    margin-left: -37.5px !important;
+    margin-top: calc(280px - 37.5px) !important;
+}
+
+/* Imagen 8: 315° (Inferior derecha) */
+.character-img:nth-child(8) {
+    margin-left: calc(198px - 37.5px) !important;
+    margin-top: calc(198px - 37.5px) !important;
+}
+
+.character-img:hover {
+    transform: scale(1.15) rotate(-360deg);
+    box-shadow: 0 8px 20px rgba(170, 68, 101, 0.5);
+    border-color: #AA4465;
+    z-index: 10;
+}
+
+
+/* Features Section */
+.features-section {
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.features-title {
+    text-align: center;
+    font-size: 2.5rem;
+    color: #AA4465;
+    margin-bottom: 3rem;
+    font-weight: bold;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.feature-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2rem;
+    border-radius: 15px;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(170, 68, 101, 0.2);
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+    background: rgba(170, 68, 101, 0.1);
+    border-color: #AA4465;
+    box-shadow: 0 10px 30px rgba(170, 68, 101, 0.3);
+}
+
+
+.feature-card h4 {
+    font-size: 1.5rem;
+    color: #AA4465;
+    margin-bottom: 1rem;
+}
+
+.feature-card p {
+    color: #CDD6D0;
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+/* Animations */
+@keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Footer Styles */
+footer {
+    z-index: 1000; /* Z-index alto para que esté siempre por encima de las imágenes orbitales */
+    background: #AA4465; /* Cambiar a mismo color que style.css para consistencia */
+}
+
+footer .contenedor-redes {
+    width: 40px;
+    height: 40px;
+}
+
+footer .redes {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    object-fit: contain;
+}
+
+footer p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Responsive Design - Mobile */
+@media (max-width: 768px) {
+    body {
+        overflow-y: auto;
+        height: auto;
+    }
+
+    .home-main {
+        height: auto;
+        min-height: calc(100vh - 120px); /* Altura mínima menos header y footer */
+        overflow: visible; /* Cambiar a visible para evitar doble scroll */
+    }
+
+    .landing-section {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem 1rem;
+        max-height: none;
+        gap: 1rem; /* Reducido de 2rem a 1rem para menos espacio entre contenido e imágenes */
+    }
+
+    .landing-content {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        position: relative;
+        z-index: 10;
+        background: rgba(22, 33, 62, 0.8);
+        padding: 0.5rem;
+        border-radius: 12px;
+    }
+
+    .main-title {
+        font-size: 1.2rem;
+        margin-bottom: 0.2rem; /* Reducido de 0.3rem */
+    }
+
+    .secondary-title {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .title-description {
+        font-size: 0.9rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .action-buttons {
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 0.7rem 1.5rem;
+        font-size: 0.9rem;
+    }
+
+    /* Cover image and orbital rotation on mobile */
+    .visual-content {
+        min-width: auto;
+        width: 100%;
+        padding: 0;
+        position: relative;
+        height: 380px;
+        margin-top: 0;
+        flex-shrink: 0;
+    }
+
+    .main-image {
+        max-width: 200px;
+        max-height: 200px;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Reduced orbital animation for mobile */
+    .character-images {
+        position: absolute;
+        width: 360px;
+        height: 360px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: rotateOrbit 60s linear infinite;
+        z-index: 0;
+    }
+
+    .character-img {
+        width: 45px !important;
+        height: 45px !important;
+        border-radius: 12px !important;
+        border: 2px solid rgba(170, 68, 101, 0.6) !important;
+        z-index: 0;
+    }
+
+    /* Posicionar imágenes con radio ampliado: 170px */
+    /* Mitad del tamaño de imagen: 22.5px */
+    /* Distribuidas uniformemente cada 45° (360° / 8 imágenes) */
+
+    /* Imagen 1: 0° (Derecha) */
+    .character-img:nth-child(1) {
+        margin-left: calc(170px - 22.5px) !important;
+        margin-top: -22.5px !important;
+    }
+
+    /* Imagen 2: 45° (Superior derecha) */
+    .character-img:nth-child(2) {
+        margin-left: calc(120px - 22.5px) !important;
+        margin-top: calc(-120px - 22.5px) !important;
+    }
+
+    /* Imagen 3: 90° (Arriba) */
+    .character-img:nth-child(3) {
+        margin-left: -22.5px !important;
+        margin-top: calc(-170px - 22.5px) !important;
+    }
+
+    /* Imagen 4: 135° (Superior izquierda) */
+    .character-img:nth-child(4) {
+        margin-left: calc(-120px - 22.5px) !important;
+        margin-top: calc(-120px - 22.5px) !important;
+    }
+
+    /* Imagen 5: 180° (Izquierda) */
+    .character-img:nth-child(5) {
+        margin-left: calc(-170px - 22.5px) !important;
+        margin-top: -22.5px !important;
+    }
+
+    /* Imagen 6: 225° (Inferior izquierda) */
+    .character-img:nth-child(6) {
+        margin-left: calc(-120px - 22.5px) !important;
+        margin-top: calc(120px - 22.5px) !important;
+    }
+
+    /* Imagen 7: 270° (Abajo) */
+    .character-img:nth-child(7) {
+        margin-left: -22.5px !important;
+        margin-top: calc(170px - 22.5px) !important;
+    }
+
+    /* Imagen 8: 315° (Inferior derecha) */
+    .character-img:nth-child(8) {
+        margin-left: calc(120px - 22.5px) !important;
+        margin-top: calc(120px - 22.5px) !important;
+    }
+
+    .features-section {
+        padding: 1.5rem 1rem;
+    }
+
+    .features-title {
+        font-size: 2rem;
+    }
+
+    footer .contenedor-redes {
+        width: 30px;
+        height: 30px;
+    }
+
+    footer {
+        z-index: 1000;
+        background: #AA4465;
+    }
+}
