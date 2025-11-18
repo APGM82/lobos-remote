@@ -12,11 +12,17 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
+        // Crear roles solo si no existen (evita errores en reinicios)
         $roles = [
             ['name' => 'admin', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'user', 'created_at' => now(), 'updated_at' => now()],
         ];
 
-        DB::table('roles')->insert($roles);
+        foreach ($roles as $role) {
+            DB::table('roles')->updateOrInsert(
+                ['name' => $role['name']],
+                $role
+            );
+        }
     }
 }

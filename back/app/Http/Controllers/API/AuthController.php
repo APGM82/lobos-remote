@@ -30,8 +30,24 @@ class AuthController extends Controller
             'image' => $validated['image'] ?? null,
         ]);
 
-        // Obtener roles del usuario (por defecto, asignar rol 'user' si no tiene)
+        // Asignar rol 'user' por defecto al nuevo usuario
+        $userRole = Role::where('name', 'user')->first();
+        if ($userRole) {
+            $user->roles()->attach($userRole->id);
+        }
+
+        // Cargar roles del usuario con los campos necesarios
+        $user->load('roles:id,name');
+        
+        // Obtener roles formateados (igual que en login)
         $roles = $user->roles;
+        
+        // Si no hay roles (por si acaso), asignar el rol 'user' y recargar
+        if ($roles->isEmpty() && $userRole) {
+            $user->roles()->attach($userRole->id);
+            $user->load('roles:id,name');
+            $roles = $user->roles;
+        }
         
         // Crear permisos según sus roles  
         $abilities = $this->getAbilitiesByRoles($roles);
@@ -44,7 +60,14 @@ class AuthController extends Controller
         $tokenResult->accessToken->save();
 
         return response()->json([
-            'user' => $user,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'nickname' => $user->nickname,
+                'email' => $user->email,
+                'image' => $user->image,
+            ],
+            'roles' => $roles,
             'token' => $tokenResult->plainTextToken,
             'expires_at' => $tokenResult->accessToken->expires_at->toDateTimeString()
         ], 201);
@@ -67,6 +90,9 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
         
         if($user && Hash::check($request->password, $user->password)){
+            
+            // Cargar roles del usuario con los campos necesarios
+            $user->load('roles:id,name');
             
             // Obtener roles del usuario
             $roles = $user->roles;
