@@ -1,4 +1,11 @@
+import { redirectIfAuthenticated, saveSession } from './auth.ts';
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Verificar si el usuario ya está autenticado (redirigir al perfil si lo está)
+    if (!redirectIfAuthenticated()) {
+        return;
+    }
+
     const registerForm = document.getElementById('registerForm') as HTMLFormElement;
     const nameInput = document.getElementById('name') as HTMLInputElement;
     const nicknameInput = document.getElementById('nickname') as HTMLInputElement;
@@ -135,10 +142,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok && data.user) {
                 // Guardar información del usuario en sessionStorage
-                sessionStorage.setItem('user', JSON.stringify(data.user));
-                sessionStorage.setItem('token', data.token || '');
+                const userData = {
+                    id: data.user.id,
+                    name: data.user.name,
+                    email: data.user.email
+                };
+                saveSession(data.token || '', userData);
                 
-                // Redirigir a la página de login o inicio
+                // Redirigir a la página de login
+                // Nota: El usuario ya tiene el rol asignado en la BD, pero redirigimos a login
+                // para que haga login y obtenga el token con los permisos correctos
                 window.location.href = 'login.html';
             } else {
                 // Manejar errores de validación del backend
