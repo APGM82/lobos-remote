@@ -7,9 +7,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copiar entrypoint
+# Copiar entrypoint y convertir line endings
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh && sed -i 's/\r$//' /entrypoint.sh
 
 # Exponer puerto
 EXPOSE 5173
