@@ -182,7 +182,7 @@ const generateModals = () => {
     const deleteModal = document.createElement('div');
     deleteModal.innerHTML += `
     <div class="modal-overlay">
-        <div class="modal">
+        <div class="deleteModal">
             <div class="modal-header">
                  <h2>Eliminar usuario</h2>
             </div>
