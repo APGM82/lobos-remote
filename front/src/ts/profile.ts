@@ -272,6 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 updateProfileDisplay();
                 hideError();
+                const imageheader = document.getElementById('profileImageHeader') as HTMLImageElement;
+                imageheader.src = data.data.image;
             } else {
                 if (data.errors) {
                     const errorMessages = Object.values(data.errors).flat();
