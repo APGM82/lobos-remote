@@ -1,4 +1,4 @@
-import {getUsers,getfilterUsers, addUser, updateUser, deleteUser} from './CrudUser.ts'
+import {getUsers,getFilterUsers, addUser, updateUser, deleteUser} from './CrudUser.ts'
 
 let selectedUser = 0
 const filter = (document.getElementById('filter') as HTMLInputElement)!;
@@ -36,7 +36,7 @@ const chargeTable = (users: any[]) => {
         const userImage = document.createElement('img');
         userImage.src = user.image;
         userImage.alt = user.name;
-        userImage.classList.add('rounded-circle', 'img-fluid');
+        userImage.classList.add('rounded-circle');
         tdImage.appendChild(userImage);
         row.appendChild(tdImage);
 
@@ -59,7 +59,7 @@ const chargeTable = (users: any[]) => {
         tdActions.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center', 'h-100');
 
         const div = document.createElement('div');
-        div.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center', 'h-100');
+        div.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center', 'h-100', 'bg-white', 'border-none');
         tdActions.appendChild(div);
 
         const editButton = document.createElement('button');
@@ -107,7 +107,7 @@ const loadUsers = async () => {
 
 const filterUsers = async (nickname : String) => {
     try {
-        const response = await getfilterUsers(nickname);
+        const response = await getFilterUsers(nickname);
         const responseData = await response.json();
         return responseData.data;
     } catch(e) {
@@ -182,7 +182,7 @@ const generateModals = () => {
     const deleteModal = document.createElement('div');
     deleteModal.innerHTML += `
     <div class="modal-overlay">
-        <div class="modal">
+        <div class="deleteModal">
             <div class="modal-header">
                  <h2>Eliminar usuario</h2>
             </div>

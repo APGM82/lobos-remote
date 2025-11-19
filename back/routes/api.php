@@ -15,7 +15,7 @@ Route::get('/debug/users-roles', function () {
     $users = \App\Models\User::with('roles')->get();
     $roles = \App\Models\Role::all();
     $userRoles = \Illuminate\Support\Facades\DB::table('user_roles')->get();
-    
+
     return response()->json([
         'summary' => [
             'total_users' => $users->count(),
@@ -53,18 +53,19 @@ Route::get('/debug/users-roles', function () {
 Route::middleware(['auth:sanctum'])->group(function () {
     // Logout
     Route::post('logout', [AuthController::class, 'logout']);
-    
+    Route::get('userToken', [UserController::class, 'showByToken']);
+
     // Rutas de perfil del usuario autenticado
     Route::get('/profile', [UserController::class, 'profile']);
     Route::post('/profile/image', [UserController::class, 'updateImage']);
     Route::post('/profile/name', [UserController::class, 'updateName']);
     Route::post('/profile/password', [UserController::class, 'updatePassword']);
-    
+
     // Rutas de usuarios (requiere autenticación)
     Route::middleware(['user'])->group(function () {
-       //aqui por si se necesita alguna ruta 
+       //aqui por si se necesita alguna ruta
     });
-    
+
     // Rutas solo para admins
     Route::middleware(['admin'])->group(function () {
         Route::get('/user', [UserController::class, 'index']);

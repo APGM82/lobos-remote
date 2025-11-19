@@ -7,15 +7,14 @@
     <link rel="stylesheet" href="../css/profile.css">
 </head>
 <body>
-    <header>
-        <div>
-            <div class="header">
-                <a href="../../index.html">
-                    <img alt="Inicio" src="../public/logo.png">
-                    <h1> Lobos de Castronegro</h1>
-                </a>
-            </div>
+    <header class="header" id="header">
+        <div class="left-group">
+            <a href="home.html">
+                <img src="../public/logo.png" alt="Logo" class="icon-left" />
+                <span class="title">Lobos de Castronegro</span>
+            </a>
         </div>
+
     </header>
 
     <main>
@@ -31,7 +30,7 @@
 
             <div class="profile-content">
                 <div class="profile-image-container">
-                    <img id="profileImage" alt="Imagen de perfil" class="profile-image">
+                    <img src="" id="profileImage" alt="Imagen de perfil" class="profile-image">
                     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/jpg" style="display: none;">
                 </div>
 
@@ -42,7 +41,7 @@
                     </div>
 
                     <div class="info-item">
-                        <label>Nombre:</label>
+                        <label for="nameInput">Nombre:</label>
                         <input type="text" id="nameInput" class="info-input disabled" maxlength="255" disabled>
                         <span id="nameValue" class="info-value">-</span>
                     </div>
@@ -127,6 +126,7 @@
         </div>
     </footer>
 
+    <script src="../main.ts" type="module"></script>
     <script type="module" src="../ts/profile.ts"></script>
 </body>
 </html>

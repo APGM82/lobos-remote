@@ -1,13 +1,14 @@
 
 const routes = {
-    users : '/html/adminUsers.html',
+    users : 'adminUser.html',
     usersUrl : 'http://127.0.0.1:8000/api/user',
-    register : '/html/register.html',
+    register : 'register.html',
     registerUrl : 'http://127.0.0.1:8000/api/register',
-    login : '/html/login.html',
+    login : 'login.html',
     loginUrl : 'http://127.0.0.1:8000/api/login',
-    profile : '/html/profile.html',
-    profileUrl : 'http://127.0.0.1:8000/api/profile'
+    profile : 'profile.html',
+    profileUrl : 'http://127.0.0.1:8000/api/profile',
+    home: 'home.html'
 }
 
 

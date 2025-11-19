@@ -27,6 +27,17 @@ class UserController extends Controller
         return response()->json(["success" => true, "data"=>$users, "massage" => "Users retrieved successfully."], 200);
     }
 
+    public function showByToken (Request $request) {
+        $user = $request->user();
+
+        $role = $user->roles;
+        $data = [
+            "user" => $user,
+            "role" => $role,
+        ];
+        return response()->json(["success" => true, "data"=>$data], 200);
+    }
+
     public function store(Request $request) {
         $input = $request->all();
         $rules = [
@@ -60,9 +71,12 @@ class UserController extends Controller
 
         $input['password'] = Hash::make($password);
         try {
-
-
             $user = User::create($input);
+            $userRole = Role::where('name', 'user')->first();
+
+            if ($userRole) {
+                $user->roles()->attach($userRole->id);
+            }
 
             Mail::send('NewUserMail', $data,function ($message) use ($email) {
                 $message->to($email);
@@ -150,6 +164,7 @@ class UserController extends Controller
         }
 
         try {
+            $user->roles()->detach();
             $user->delete();
             return response()->json(["success"=>true, "message"=>"User successfully removed!"], 200);
         } catch (Exception $e) {
@@ -161,14 +176,14 @@ class UserController extends Controller
     public function profile(Request $request)
     {
         $user = $request->user();
-        
+
         if (is_null($user)) {
             return response()->json(["success" => false, "message" => "Usuario no autenticado"], 401);
         }
 
         // Cargar roles del usuario con los campos necesarios
         $user->load('roles:id,name');
-        
+
         // Si el usuario no tiene roles, asignar el rol 'user' por defecto
         if ($user->roles->isEmpty()) {
             $userRole = Role::where('name', 'user')->first();
@@ -178,7 +193,7 @@ class UserController extends Controller
                 $user->load('roles:id,name');
             }
         }
-        
+
         // Obtener roles formateados
         $roles = $user->roles;
 
@@ -202,7 +217,7 @@ class UserController extends Controller
         $rules = [
             'image' => 'required|file|image|mimes:jpeg,png,jpg|max:2048',
         ];
-        
+
         $messages = [
             'required' => 'El campo :attribute es obligatorio.',
             'image' => 'El campo :attribute debe ser una imagen.',
@@ -255,7 +270,7 @@ class UserController extends Controller
         $rules = [
             'name' => 'required|string|max:255',
         ];
-        
+
         $messages = [
             'required' => 'El campo :attribute es obligatorio.',
             'string' => 'El campo :attribute debe ser una cadena de caracteres.',
@@ -299,7 +314,7 @@ class UserController extends Controller
             'new_password' => 'required|string|min:8',
             'new_password_confirmation' => 'required|string|same:new_password',
         ];
-        
+
         $messages = [
             'required' => 'El campo :attribute es obligatorio.',
             'min' => 'La nueva contraseña debe tener al menos 8 caracteres.',
