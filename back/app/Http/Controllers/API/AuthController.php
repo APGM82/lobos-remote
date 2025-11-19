@@ -27,7 +27,7 @@ class AuthController extends Controller
             'nickname' => $validated['nickname'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'image' => $validated['image'] ?? null,
+            'image' => $validated['image'] ?? "https://res.cloudinary.com/dkwl53odf/image/upload/v1763383386/profile_jkjkq7.png",
         ]);
 
         // Asignar rol 'user' por defecto al nuevo usuario
@@ -38,23 +38,23 @@ class AuthController extends Controller
 
         // Cargar roles del usuario con los campos necesarios
         $user->load('roles:id,name');
-        
+
         // Obtener roles formateados (igual que en login)
         $roles = $user->roles;
-        
+
         // Si no hay roles (por si acaso), asignar el rol 'user' y recargar
         if ($roles->isEmpty() && $userRole) {
             $user->roles()->attach($userRole->id);
             $user->load('roles:id,name');
             $roles = $user->roles;
         }
-        
-        // Crear permisos según sus roles  
+
+        // Crear permisos según sus roles
         $abilities = $this->getAbilitiesByRoles($roles);
-        
+
         // Crear el token con los permisos
         $tokenResult = $user->createToken('authToken', $abilities);
-        
+
         // Que expire en 24 horas
         $tokenResult->accessToken->expires_at = now()->addHours(24);
         $tokenResult->accessToken->save();
@@ -81,28 +81,28 @@ class AuthController extends Controller
             'email' => 'required|email',
             'password' => 'required|min:8'
         ];
-        
+
         $validator = Validator::make($input, $rules);
         if($validator->fails()){
             return response()->json($validator->errors(), 422);
         }
 
         $user = User::where('email', $request->email)->first();
-        
+
         if($user && Hash::check($request->password, $user->password)){
-            
+
             // Cargar roles del usuario con los campos necesarios
             $user->load('roles:id,name');
-            
+
             // Obtener roles del usuario
             $roles = $user->roles;
-            
-            // Crear permisos según sus roles  
+
+            // Crear permisos según sus roles
             $abilities = $this->getAbilitiesByRoles($roles);
-            
+
             // Crear el token con los permisos
             $tokenResult = $user->createToken('authToken', $abilities);
-            
+
             // Que expire en 24 horas
             $tokenResult->accessToken->expires_at = now()->addHours(24);
             $tokenResult->accessToken->save();
@@ -128,7 +128,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
         $tokensDeleted = $user->tokens()->delete();
-        
+
         return response()->json([
             "success" => true,
             "message" => "Tokens revocados: " . $tokensDeleted
@@ -139,10 +139,10 @@ class AuthController extends Controller
     private function getAbilitiesByRoles($roles)
     {
         $abilities = [];
-        
+
         foreach($roles as $role) {
             $roleName = $role->name;
-            
+
             switch($roleName) {
                 case 'admin':
                     $abilities = array_merge($abilities, ['admin', 'user', 'read', 'write', 'delete']);
@@ -152,7 +152,7 @@ class AuthController extends Controller
                     break;
             }
         }
-        
+
         return array_unique($abilities);
     }
 }
