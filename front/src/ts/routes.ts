@@ -7,7 +7,8 @@ const routes = {
     login : 'login.html',
     loginUrl : 'http://127.0.0.1:8000/api/login',
     profile : 'profile.html',
-    profileUrl : 'http://127.0.0.1:8000/api/profile'
+    profileUrl : 'http://127.0.0.1:8000/api/profile',
+    home: 'home.html'
 }
 
 
