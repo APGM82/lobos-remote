@@ -7,12 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Log extends Model
 {
-    protected $table = 'logs';
+    protected $table = 'game_logs';
 
     protected $fillable = [
         'user_lobby_id',
         'turn',
-        'fase',
+        'stage',
         'action_id',
         'user_id',
         'affected_user_id',

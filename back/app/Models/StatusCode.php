@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Lobby extends Model
+class StatusCode extends Model
 {
-    protected $table = 'lobbies';
+    protected $table = 'game_status';
     protected $fillable = [
-        'code',
-        'status'
+        'code_status',
+        'name'
     ];
 }
