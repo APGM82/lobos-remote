@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('logs', function (Blueprint $table) {
+        Schema::create('game_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('id_game_lobby');
             $table->integer('turn');
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('id_game_lobby')->references('id')->on('game_lobbies');
-            $table->foreign('action_id')->references('id')->on('actions');
+            $table->foreign('action_id')->references('id')->on('game_actions');
             $table->foreign('user_id')->references('id')->on('users');
             $table->foreign('affected_user_id')->references('id')->on('users');
         });

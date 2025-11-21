@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('id_user_host')->references('id')->on('users');
-            $table->foreign('code_status')->references('id')->on('status_codes');
+            $table->foreign('code_status')->references('id')->on('game_status');
         });
     }
 

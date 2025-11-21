@@ -19,7 +19,7 @@ return new class extends Migration
 
             $table->foreign('id_game')->references('id')->on('games');
             $table->foreign('id_user')->references('id')->on('users');
-            $table->foreign('id_character')->references('id')->on('characters');
+            $table->foreign('id_character')->references('id')->on('game_characters');
 
         });
     }
