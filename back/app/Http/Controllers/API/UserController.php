@@ -15,16 +15,56 @@ use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
-    public function index() {
-        $users = User::all();
+    /**
+     * Obtener lista de usuarios con paginación
+     * Acepta parámetro 'page' en la request para navegar entre páginas
+     * Devuelve 5 usuarios por página
+     */
+    public function index(Request $request) {
+        // Aplicar paginación: 5 usuarios por página
+        // Laravel automáticamente obtiene el parámetro 'page' de la request
+        $usersPaginated = User::paginate(5);
 
-        return response()->json(["success" => true, "data"=>$users, "massage" => "Users retrieved successfully."], 200);
+        // Devolver respuesta con estructura paginada
+        return response()->json([
+            "success" => true,
+            "data" => $usersPaginated->items(),
+            "pagination" => [
+                "current_page" => $usersPaginated->currentPage(),
+                "last_page" => $usersPaginated->lastPage(),
+                "per_page" => $usersPaginated->perPage(),
+                "total" => $usersPaginated->total(),
+                "from" => $usersPaginated->firstItem(),
+                "to" => $usersPaginated->lastItem(),
+            ],
+            "massage" => "Users retrieved successfully."
+        ], 200);
     }
 
-    public function show($nickname){
-        $users = User::where('nickname', 'like', "%$nickname%")->get();
+    /**
+     * Buscar usuarios por nickname con paginación
+     * Acepta parámetro 'page' en la request para navegar entre páginas
+     * Devuelve 5 usuarios por página que coincidan con el filtro
+     */
+    public function show(Request $request, $nickname){
+        // Aplicar paginación: 5 usuarios por página
+        // Laravel automáticamente obtiene el parámetro 'page' de la request
+        $usersPaginated = User::where('nickname', 'like', "%$nickname%")->paginate(5);
 
-        return response()->json(["success" => true, "data"=>$users, "massage" => "Users retrieved successfully."], 200);
+        // Devolver respuesta con estructura paginada
+        return response()->json([
+            "success" => true,
+            "data" => $usersPaginated->items(),
+            "pagination" => [
+                "current_page" => $usersPaginated->currentPage(),
+                "last_page" => $usersPaginated->lastPage(),
+                "per_page" => $usersPaginated->perPage(),
+                "total" => $usersPaginated->total(),
+                "from" => $usersPaginated->firstItem(),
+                "to" => $usersPaginated->lastItem(),
+            ],
+            "massage" => "Users retrieved successfully."
+        ], 200);
     }
 
     public function showByToken (Request $request) {

@@ -8,6 +8,8 @@ const routes = {
     loginUrl : 'http://127.0.0.1:8000/api/login',
     profile : 'profile.html',
     profileUrl : 'http://127.0.0.1:8000/api/profile',
+    findGame : 'findGame.html',
+    gamesUrl : 'http://127.0.0.1:8000/api/findGame',
     home: 'home.html'
 }
 

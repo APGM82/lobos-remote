@@ -1,30 +1,78 @@
 import {getUsers,getFilterUsers, addUser, updateUser, deleteUser} from './CrudUser.ts'
 
 let selectedUser = 0
+let currentPage = 1 // Página actual de la paginación
+let currentFilter = '' // Filtro de búsqueda actual para mantenerlo al cambiar de página
+let paginationInfo: any = null // Información de paginación recibida del backend
+
 const filter = (document.getElementById('filter') as HTMLInputElement)!;
 
-const showUsers = () =>
-    loadUsers().then(users => {
-        if (users.length === 0) {
-            const usersContainer = document.getElementById('usersContainer');
-            usersContainer?.classList.add('disabled');
+/**
+ * Mostrar usuarios con paginación
+ * Carga los usuarios de la página actual y renderiza la tabla junto con los controles de paginación
+ */
+const showUsers = () => {
+    // Si hay un filtro activo, usar filterUsers, sino usar loadUsers
+    if (currentFilter.trim()) {
+        filterUsers(currentFilter).then(result => {
+            handleUsersResponse(result)
+        })
+    } else {
+        loadUsers().then(result => {
+            handleUsersResponse(result)
+        })
+    }
+}
 
-            const usersError = document.getElementById('usersError');
-            usersError?.classList.remove('disabled');
-        } else {
-            const usersContainer = document.getElementById('usersContainer');
-            usersContainer?.classList.remove('disabled');
+/**
+ * Maneja la respuesta de los usuarios (con o sin paginación)
+ * @param result - Objeto con datos y paginación, o array de usuarios
+ */
+const handleUsersResponse = (result: any) => {
+    let users: any[] = []
+    let pagination: any = null
 
-            const usersError = document.getElementById('usersError');
-            usersError?.classList.add('disabled');
+    // Verificar si la respuesta incluye paginación
+    if (result && typeof result === 'object' && 'data' in result && 'pagination' in result) {
+        users = result.data || []
+        pagination = result.pagination
+        paginationInfo = pagination
+    } else if (Array.isArray(result)) {
+        // Compatibilidad con formato antiguo (sin paginación)
+        users = result
+    }
 
-            chargeTable(users)
-        }
-    });
+    if (users.length === 0) {
+        // Ocultar la tabla y mostrar el mensaje de error
+        const table = document.querySelector('#tableContainer table')
+        table?.classList.add('disabled')
 
+        const usersError = document.getElementById('usersError')
+        usersError?.classList.remove('disabled')
+        
+        // Limpiar paginación si no hay resultados
+        renderPagination(null)
+    } else {
+        // Mostrar la tabla y ocultar el error
+        const table = document.querySelector('#tableContainer table')
+        table?.classList.remove('disabled')
+
+        const usersError = document.getElementById('usersError')
+        usersError?.classList.add('disabled')
+
+        chargeTable(users)
+        renderPagination(pagination)
+    }
+}
+
+/**
+ * Event listener para el filtro de búsqueda
+ * Al escribir, resetea a la página 1 y aplica el filtro
+ */
 filter.addEventListener('keyup', async () => {
-    const users = await filterUsers(filter.value)
-    chargeTable(users)
+    currentFilter = filter.value
+    currentPage = 1 // Resetear a la primera página al filtrar
+    showUsers() // Recargar con el nuevo filtro
 })
 const chargeTable = (users: any[]) => {
     document.getElementById('usersTable')!.innerHTML = ""
@@ -94,26 +142,176 @@ const chargeTable = (users: any[]) => {
     })
 }
 
-const loadUsers = async () => {
+/**
+ * Cargar usuarios con paginación
+ * @returns Promise con objeto que contiene data (array de usuarios) y pagination (metadatos)
+ */
+const loadUsers = async (): Promise<any> => {
     try {
-        const response = await getUsers();
+        const response = await getUsers(currentPage);
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                window.location.href = 'login.html'
+                return { data: [], pagination: null }
+            }
+            return { data: [], pagination: null }
+        }
+        
         const responseData = await response.json();
-        return responseData.data;
+        
+        if (responseData.success && responseData.data) {
+            // Devolver tanto los datos como la información de paginación
+            return {
+                data: responseData.data,
+                pagination: responseData.pagination || null
+            }
+        }
+        return { data: [], pagination: null }
     } catch(e) {
         console.error("Error al cargar los usuarios:", e);
-        return [];
+        return { data: [], pagination: null }
     }
 };
 
-const filterUsers = async (nickname : String) => {
+/**
+ * Filtrar usuarios por nickname con paginación
+ * @param nickname - Término de búsqueda
+ * @returns Promise con objeto que contiene data (array de usuarios) y pagination (metadatos)
+ */
+const filterUsers = async (nickname : String): Promise<any> => {
     try {
-        const response = await getFilterUsers(nickname);
+        if (!nickname || nickname.trim() === '') {
+            // Si no hay filtro, cargar todos los usuarios
+            return await loadUsers()
+        }
+        
+        const response = await getFilterUsers(nickname.trim(), currentPage);
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                window.location.href = 'login.html'
+                return { data: [], pagination: null }
+            }
+            return { data: [], pagination: null }
+        }
+        
         const responseData = await response.json();
-        return responseData.data;
+        
+        if (responseData.success && responseData.data) {
+            // Devolver tanto los datos como la información de paginación
+            return {
+                data: responseData.data,
+                pagination: responseData.pagination || null
+            }
+        }
+        return { data: [], pagination: null }
     } catch(e) {
         console.error("Error al filtrar los usuarios:", e);
-        return [];
+        return { data: [], pagination: null }
     }
+}
+
+/**
+ * Cambiar a una página específica
+ * @param page - Número de página a la que cambiar
+ */
+const changePage = (page: number) => {
+    if (page < 1 || (paginationInfo && page > paginationInfo.last_page)) {
+        return // No hacer nada si la página es inválida
+    }
+    currentPage = page
+    showUsers() // Recargar usuarios de la nueva página
+}
+
+/**
+ * Renderizar los controles de paginación
+ * @param pagination - Objeto con información de paginación (current_page, last_page, total, etc.)
+ */
+const renderPagination = (pagination: any) => {
+    const container = document.getElementById('paginationContainer')
+    if (!container) return
+
+    // Limpiar contenedor
+    container.innerHTML = ''
+
+    // Si no hay información de paginación o solo hay una página, no mostrar controles
+    if (!pagination || pagination.last_page <= 1) {
+        return
+    }
+
+    const { current_page, last_page } = pagination
+
+    // Crear contenedor principal
+    const paginationDiv = document.createElement('div')
+    paginationDiv.classList.add('pagination-container')
+
+    // Contenedor para números de página
+    const pageNumbersDiv = document.createElement('div')
+    pageNumbersDiv.classList.add('pagination-numbers')
+
+    // Calcular qué números de página mostrar (máximo 5 alrededor de la página actual)
+    let startPage = Math.max(1, current_page - 2)
+    let endPage = Math.min(last_page, current_page + 2)
+
+    // Ajustar si estamos cerca del inicio o del final
+    if (endPage - startPage < 4) {
+        if (startPage === 1) {
+            endPage = Math.min(last_page, startPage + 4)
+        } else if (endPage === last_page) {
+            startPage = Math.max(1, endPage - 4)
+        }
+    }
+
+    // Mostrar primera página si no está en el rango
+    if (startPage > 1) {
+        const firstBtn = document.createElement('button')
+        firstBtn.classList.add('pagination-number')
+        firstBtn.textContent = '1'
+        firstBtn.addEventListener('click', () => changePage(1))
+        pageNumbersDiv.appendChild(firstBtn)
+
+        if (startPage > 2) {
+            const ellipsis = document.createElement('button')
+            ellipsis.classList.add('pagination-ellipsis')
+            ellipsis.textContent = '...'
+            ellipsis.disabled = true
+            pageNumbersDiv.appendChild(ellipsis)
+        }
+    }
+
+    // Mostrar números de página en el rango calculado
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('button')
+        pageBtn.classList.add('pagination-number')
+        if (i === current_page) {
+            pageBtn.classList.add('active')
+        }
+        pageBtn.textContent = i.toString()
+        pageBtn.addEventListener('click', () => changePage(i))
+        pageNumbersDiv.appendChild(pageBtn)
+    }
+
+    // Mostrar última página si no está en el rango
+    if (endPage < last_page) {
+        if (endPage < last_page - 1) {
+            const ellipsis = document.createElement('button')
+            ellipsis.classList.add('pagination-ellipsis')
+            ellipsis.textContent = '...'
+            ellipsis.disabled = true
+            pageNumbersDiv.appendChild(ellipsis)
+        }
+
+        const lastBtn = document.createElement('button')
+        lastBtn.classList.add('pagination-number')
+        lastBtn.textContent = last_page.toString()
+        lastBtn.addEventListener('click', () => changePage(last_page))
+        pageNumbersDiv.appendChild(lastBtn)
+    }
+
+    paginationDiv.appendChild(pageNumbersDiv)
+
+    container.appendChild(paginationDiv)
 }
 
 const generateModals = () => {
@@ -252,6 +450,7 @@ const generateModals = () => {
         const form = document.getElementById('addModalForm') as HTMLFormElement;
         addModal.style.display = 'none';
         form!.reset();
+        currentPage = 1 // Resetear a la primera página
         await showUsers();
     })
 
@@ -281,6 +480,7 @@ const generateModals = () => {
             const responseData = await response.json();
             console.log("Agregado con éxito:", responseData);
 
+            currentPage = 1 // Resetear a la primera página
             await showUsers();
         } catch (e) {
             console.error("Error al modificar el usuario:", e);
@@ -289,6 +489,7 @@ const generateModals = () => {
         const form = document.getElementById('modifyModalForm') as HTMLFormElement;
         modifyModal.style.display = 'none';
         form!.reset();
+        currentPage = 1 // Resetear a la primera página
         await showUsers();
     })
 
@@ -310,6 +511,7 @@ const generateModals = () => {
 
             deleteModal.style.display = 'none'
 
+            currentPage = 1 // Resetear a la primera página
             await showUsers();
 
         } catch (e) {
