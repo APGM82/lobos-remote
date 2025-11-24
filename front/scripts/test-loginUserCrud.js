@@ -18,14 +18,14 @@ const PASSWORD = "admin12345$";
         const loginJson = await loginResponse.json();
         const token = loginJson.data.token;
         if (!token) {
-            process.stderr.write("❌ Error: No se pudo obtener el token\n");
+            process.stderr.write("Error: No se pudo obtener el token\n");
             process.stderr.write("Respuesta del servidor:\n" + JSON.stringify(loginJson) + "\n");
-            process.stderr.write("❌ Abortando commit.\n");
+            process.stderr.write("Abortando commit.\n");
             process.exit(1);
         }
 
-        process.stdout.write(`🔑 Token obtenido correctamente: ${token}\n`);
-        process.stdout.write("👥 Recuperando usuarios desde la API...\n");
+        process.stdout.write(`Token obtenido correctamente`);
+        process.stdout.write("Recuperando usuarios desde la API...\n");
 
         const usersResponse = await fetch(USERS_URL, {
             method: 'GET',
@@ -34,16 +34,16 @@ const PASSWORD = "admin12345$";
         const usersResponseJson = await usersResponse.json();
 
         if (usersResponse.status !== 200) {
-            process.stderr.write(`❌ Error al obtener usuarios. Código: ${usersResponse.status}\n`);
-            process.stderr.write("❌ Abortando commit.\n");
+            process.stderr.write(`Error al obtener usuarios. Código: ${usersResponse.status}\n`);
+            process.stderr.write("Abortando commit.\n");
             process.exit(1);
         }
 
         fs.writeFileSync('/tmp/users_response.json', JSON.stringify(usersResponseJson));
-        process.stdout.write("✅ Usuarios obtenidos correctamente (guardados en /tmp/users_response.json)\n");
-        process.stdout.write("✔️ Continuando con el commit…\n");
+        process.stdout.write("Usuarios obtenidos correctamente (guardados en /tmp/users_response.json)\n");
+        process.stdout.write("Continuando con el commit…\n");
     } catch (err) {
-        process.stderr.write("❌ Error inesperado:\n" + err + "\n❌ Abortando commit.\n");
+        process.stderr.write("Error inesperado:\n" + err + "\nAbortando commit.\n");
         process.exit(1);
     }
 })();
