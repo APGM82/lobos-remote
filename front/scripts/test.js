@@ -3,6 +3,7 @@ import { join } from 'path';
 
 console.log('Ejecutando tests del proyecto Lobos de Castronegro...\n');
 
+// Author: Antonio Pérez García-Moreno
 // Test: Verificar que todas las páginas HTML principales existen
 const paginasRequeridas = [
   'home.html',
@@ -27,6 +28,9 @@ if (faltantes.length > 0) {
   process.exit(1);
 }
 
+
+//Author: Alberto Gómez Serrano
+// Test para validar login y el los usuarios que se obtienen de la API
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 import fs from 'fs';
 
