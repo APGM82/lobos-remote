@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\GameController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -60,6 +61,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/profile/image', [UserController::class, 'updateImage']);
     Route::post('/profile/name', [UserController::class, 'updateName']);
     Route::post('/profile/password', [UserController::class, 'updatePassword']);
+
+    // Rutas de partidas (games)
+    Route::get('/findGame', [GameController::class, 'index']);
+    Route::get('/findGame/{id}', [GameController::class, 'show'])->whereNumber('id');
+    Route::post('/findGame', [GameController::class, 'store']);
+    Route::post('/findGame/{id}', [GameController::class, 'update'])->whereNumber('id');
+    Route::delete('/findGame/{id}', [GameController::class, 'destroy'])->whereNumber('id');
+    Route::post('/findGame/{id}/join', [GameController::class, 'join'])->whereNumber('id');
+    Route::post('/findGame/{id}/leave', [GameController::class, 'leave'])->whereNumber('id');
 
     // Rutas de usuarios (requiere autenticación)
     Route::middleware(['user'])->group(function () {
