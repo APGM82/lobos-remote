@@ -8,11 +8,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node scripts/test-html.js",
-    "prepare": "husky"
+    "test": "node scripts/test.js"
   },
   "devDependencies": {
-    "husky": "^9.1.7",
     "typescript": "~5.9.3",
     "vite": "^7.1.7"
   },
