@@ -1,8 +1,2 @@
-echo "🧪 Ejecutando tests..."
-if (Test-Path "src/main.ts") { 
-  echo "✅ Test pasado: archivo main.ts existe"
-  exit 0
-} else {
-  echo "❌ Test fallido: archivo main.ts no encontrado"
-  exit 1
-}
+npm test
+
