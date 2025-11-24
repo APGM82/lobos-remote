@@ -9,7 +9,9 @@ const paginasRequeridas = [
   'login.html', 
   'register.html',
   'findGame.html',
-  'profile.html'
+  'profile.html',
+  'adminUser.html',
+  'example.html'
 ];
 
 const faltantes = [];
@@ -30,3 +32,7 @@ if (faltantes.length > 0) {
 console.log('Todas las páginas HTML principales están presentes');
 console.log('Tests pasados correctamente!\n');
 process.exit(0);
+
+
+
+//test para otra cosa
