@@ -67,6 +67,19 @@ const handleGamesResponse = (result: any) => {
         games = result.data || []
         pagination = result.pagination
         paginationInfo = pagination
+        
+        // Si la página actual quedó vacía y hay una página anterior, ir a esa
+        if (games.length === 0 && pagination && pagination.last_page > 0 && currentPage > pagination.last_page) {
+            currentPage = pagination.last_page
+            // Recargar con la página ajustada
+            showGames()
+            return
+        }
+        
+        // Actualizar currentPage con la página que realmente devolvió el backend
+        if (pagination && pagination.current_page) {
+            currentPage = pagination.current_page
+        }
     } else if (Array.isArray(result)) {
         // Compatibilidad con formato antiguo (sin paginación)
         games = result
@@ -611,7 +624,7 @@ const handleDeleteGame = async (gameId: number, gameName: string) => {
 
         if (data.success) {
             alert('Partida eliminada correctamente')
-            currentPage = 1 // Resetear a la primera página
+            // Mantener la página actual en lugar de resetear a la primera
             showGames()
         } else {
             alert(data.message || 'Error al eliminar la partida')

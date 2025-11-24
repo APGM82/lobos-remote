@@ -37,6 +37,19 @@ const handleUsersResponse = (result: any) => {
         users = result.data || []
         pagination = result.pagination
         paginationInfo = pagination
+        
+        // Si la página actual quedó vacía y hay una página anterior, ir a esa
+        if (users.length === 0 && pagination && pagination.last_page > 0 && currentPage > pagination.last_page) {
+            currentPage = pagination.last_page
+            // Recargar con la página ajustada
+            showUsers()
+            return
+        }
+        
+        // Actualizar currentPage con la página que realmente devolvió el backend
+        if (pagination && pagination.current_page) {
+            currentPage = pagination.current_page
+        }
     } else if (Array.isArray(result)) {
         // Compatibilidad con formato antiguo (sin paginación)
         users = result
@@ -511,7 +524,7 @@ const generateModals = () => {
 
             deleteModal.style.display = 'none'
 
-            currentPage = 1 // Resetear a la primera página
+            // Mantener la página actual en lugar de resetear a la primera
             await showUsers();
 
         } catch (e) {
