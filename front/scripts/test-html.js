@@ -32,12 +32,12 @@ import fs from 'fs';
 
 const LOGIN_URL = "http://host.docker.internal:8000/api/login";
 const USERS_URL = "http://host.docker.internal:8000/api/user";
-const EMAIL = "los4mosqueperrosdev2@gmail.com";
+const EMAIL = "los4mosqueperrosdev@gmail.com";
 const PASSWORD = "admin12345$";
 
 (async () => {
     try {
-        process.stdout.write("🔐 Iniciando sesión para obtener token...\n");
+        process.stdout.write("Iniciando sesión para obtener token...\n");
         const loginResponse = await fetch(LOGIN_URL, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -75,8 +75,9 @@ const PASSWORD = "admin12345$";
         process.stderr.write("Error inesperado:\n" + err + "\nAbortando commit.\n");
         process.exit(1);
     }
+
+    console.log('Todas las páginas HTML principales están presentes');
+    console.log('Tests pasados correctamente!\n');
+    process.exit(0);
 })();
 
-console.log('Todas las páginas HTML principales están presentes');
-console.log('Tests pasados correctamente!\n');
-process.exit(0);
