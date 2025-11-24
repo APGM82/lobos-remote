@@ -27,10 +27,6 @@ if (faltantes.length > 0) {
   process.exit(1);
 }
 
-console.log('Todas las páginas HTML principales están presentes');
-console.log('Tests pasados correctamente!\n');
-process.exit(0);
-
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 import fs from 'fs';
 
@@ -80,3 +76,7 @@ const PASSWORD = "admin12345$";
         process.exit(1);
     }
 })();
+
+console.log('Todas las páginas HTML principales están presentes');
+console.log('Tests pasados correctamente!\n');
+process.exit(0);
