@@ -2,9 +2,9 @@ import routes from "../routes.ts"
 
 const apiUrl = routes.usersUrl
 const token = sessionStorage.getItem('token')
-const getUsers = async () => {
+const getUsers = async (page: number = 1) => {
     try {
-        return await fetch(apiUrl, {
+        return await fetch(`${apiUrl}?page=${page}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -16,9 +16,9 @@ const getUsers = async () => {
     }
 }
 
-const getFilterUsers = async (nickname : String) => {
+const getFilterUsers = async (nickname : String, page: number = 1) => {
     try {
-        return await fetch(`${apiUrl}/${nickname}`, {
+        return await fetch(`${apiUrl}/${nickname}?page=${page}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

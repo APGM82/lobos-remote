@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Buscar Partidas - Lobos de Castronegro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/findGame.css">
+</head>
+<body>
+    <header class="header" id="header">
+        <div class="left-group">
+            <a href="home.html">
+                <img src="../public/logo.png" alt="Logo" class="icon-left" />
+                <span class="title">Lobos de Castronegro</span>
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <div id="gamesContainer">
+            <div class="title">
+                <h1>Buscar Partidas</h1>
+            </div>
+            <div class="d-flex w-75 filter-container">
+                <div class="filter">
+                    <label for="filter">Buscar partida:</label>
+                    <input type="text" id="filter" placeholder="Nombre de la partida" class="w-60">
+                </div>
+                <div class="w-25">
+                    <button id="createGameBtn" class="btn success">Crear Partida</button>
+                </div>
+            </div>
+            <div id="tableContainer">
+                <div id="gamesError" class="error-message disabled">
+                    <p id="errorText">No se ha encontrado una partida con ese codigo o nombre</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="w-25">Nombre</th>
+                            <th class="w-15">Código</th>
+                            <th class="w-15">Numero de jugadores</th>
+                            <th class="w-15">Estado</th>
+                            <th class="w-30">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gamesTable">
+                        <!-- Las partidas se cargarán dinámicamente aquí -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Contenedor para los controles de paginación -->
+            <div id="paginationContainer"></div>
+        </div>
+    </main>
+
+    <footer>
+        <div>
+            <div>
+                <p> Copyright © 2025 · Los Hombres Lobo de Castronegro</p>
+            </div>
+            <div class="contenedor">
+                Contacto: los4mosqueperros@gmail.com
+            </div>
+            <div class="contenedor">
+                <div class="contenedor-redes">
+                    <a href="https://www.facebook.com/?locale=es_ES">
+                        <img src="https://img.icons8.com/?size=100&id=87311&format=png&color=CDD6D0" alt="Facebook" class="redes">
+                    </a>
+                </div>
+                <div class="contenedor-redes">
+                    <a href="https://www.instagram.com/?hl=es">
+                        <img src="https://img.icons8.com/?size=100&id=TRVfmt9zm5vL&format=png&color=CDD6D0" alt="Instagram" class="redes">
+                    </a>
+                </div>
+                <div class="contenedor-redes">
+                    <a href="https://x.com/?lang=es">
+                        <img src="https://img.icons8.com/?size=100&id=fJp7hepMryiw&format=png&color=CDD6D0" alt="Twitter" class="redes">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../main.ts" type="module"></script>
+    <script src="../ts/findGame/MainGame.ts" type="module"></script>
+</body>
+</html>
+

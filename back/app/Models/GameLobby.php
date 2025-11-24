@@ -9,6 +9,8 @@ class GameLobby extends Model
 {
     public $table = 'game_lobbies';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'id_game',
         'id_user',

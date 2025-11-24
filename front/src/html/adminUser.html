@@ -19,10 +19,6 @@
 
 
         <main>
-            <div id="usersError" class="error disabled">
-                <h1>Ha sucecido un error</h1>
-                <p id="errorText">No se han podido encontrar usuarios.</p>
-            </div>
             <div id="usersContainer">
                 <div class="title">
                     <h1>Administrar usuarios</h1>
@@ -37,7 +33,10 @@
                     </div>
 
                 </div>
-                <div>
+                <div id="tableContainer">
+                    <div id="usersError" class="error-message disabled">
+                        <p id="errorText">No se ha encontrado un usuario con ese nickname</p>
+                    </div>
                     <table>
                         <thead>
                         <tr>
@@ -53,6 +52,8 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- Contenedor para los controles de paginación -->
+                <div id="paginationContainer"></div>
             </div>
         </main>
 
