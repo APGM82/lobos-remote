@@ -5,7 +5,7 @@ const fs = require('fs');
 
 const LOGIN_URL = "http://127.0.0.1:8000/api/login";
 const USERS_URL = "http://127.0.0.1:8000/api/user";
-const EMAIL = "los4mosqueperrosdev2@gmail.com";
+const EMAIL = "los4mosqueperrosdev@gmail.com";
 const PASSWORD = "admin12345$";
 
 (async () => {
