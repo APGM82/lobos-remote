@@ -1,11 +1,9 @@
-// scripts/precommit.js
-
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const fs = require('fs');
+import fs from 'fs';
 
-const LOGIN_URL = "http://127.0.0.1:8000/api/login";
-const USERS_URL = "http://127.0.0.1:8000/api/user";
-const EMAIL = "los4mosqueperrosdev2@gmail.com";
+const LOGIN_URL = "http://host.docker.internal:8000/api/login";
+const USERS_URL = "http://host.docker.internal:8000/api/user";
+const EMAIL = "los4mosqueperrosdev@gmail.com";
 const PASSWORD = "admin12345$";
 
 (async () => {
@@ -18,7 +16,7 @@ const PASSWORD = "admin12345$";
         });
 
         const loginJson = await loginResponse.json();
-        const token = loginJson.token;
+        const token = loginJson.data.token;
         if (!token) {
             process.stderr.write("❌ Error: No se pudo obtener el token\n");
             process.stderr.write("Respuesta del servidor:\n" + JSON.stringify(loginJson) + "\n");
