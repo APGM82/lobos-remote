@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\CharacterController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\GameController;
@@ -10,6 +11,7 @@ Route::post('/register', [AuthController::class, 'register']);
 
 // Login (sin autenticación)
 Route::post('login', [AuthController::class, 'login']);
+Route::post('/game/assignCharacters/{idGame}', [CharacterController::class, 'assignCharactersToUser']);
 
 // Ruta de debug - ver usuarios y sus roles (sin autenticación para facilitar el debug)
 Route::get('/debug/users-roles', function () {
@@ -70,6 +72,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/findGame/{id}', [GameController::class, 'destroy'])->whereNumber('id');
     Route::post('/findGame/{id}/join', [GameController::class, 'join'])->whereNumber('id');
     Route::post('/findGame/{id}/leave', [GameController::class, 'leave'])->whereNumber('id');
+
 
     // Rutas de usuarios (requiere autenticación)
     Route::middleware(['user'])->group(function () {

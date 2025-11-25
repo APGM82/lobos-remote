@@ -21,8 +21,13 @@ class DatabaseSeeder extends Seeder
 
         // Crear estados de partidas
         $this->call(StatusCodeSeeder::class);
-        
+
+        //Crear los personajes de la partida
+        $this->call(CharacterSeeder::class);
+
         // Crear partidas de ejemplo
         $this->call(GameSeeder::class);
+
+
     }
 }
