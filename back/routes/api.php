@@ -11,7 +11,6 @@ Route::post('/register', [AuthController::class, 'register']);
 
 // Login (sin autenticación)
 Route::post('login', [AuthController::class, 'login']);
-Route::post('/game/assignCharacters/{idGame}', [CharacterController::class, 'assignCharactersToUser']);
 
 // Ruta de debug - ver usuarios y sus roles (sin autenticación para facilitar el debug)
 Route::get('/debug/users-roles', function () {
@@ -73,6 +72,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/findGame/{id}/join', [GameController::class, 'join'])->whereNumber('id');
     Route::post('/findGame/{id}/leave', [GameController::class, 'leave'])->whereNumber('id');
 
+    Route::group(['prefix' => 'game'], function () {
+        Route::post('assignCharacters/{idGame}', [CharacterController::class, 'assignCharactersToUser']);
+    });
 
     // Rutas de usuarios (requiere autenticación)
     Route::middleware(['user'])->group(function () {
