@@ -1,0 +1,655 @@
+<?php
+
+namespace App\Http\Controllers\API;
+
+use App\Http\Controllers\Controller;
+use App\Models\Game;
+use App\Models\GameLobby;
+use App\Models\StatusCode;
+use App\Models\Character;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Exception;
+
+class GameController extends Controller
+{
+    /**
+     * Listar todas las partidas
+     * Permite filtrar por nombre
+     */
+    public function index(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $isAdmin = $user && $user->tokenCan('admin');
+            
+            $query = Game::with(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
+
+            // Manejar partidas eliminadas según el parámetro
+            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            $includeDeleted = $request->has('include_deleted') && $request->include_deleted === 'true' && $isAdmin;
+            
+            if ($deletedStatus) {
+                if ($includeDeleted) {
+                    // Si el admin solicita ver eliminadas, mostrar SOLO las eliminadas
+                    $query->where('code_status', '=', $deletedStatus->id);
+                } else {
+                    // Por defecto, excluir partidas eliminadas
+                    $query->where('code_status', '!=', $deletedStatus->id);
+                }
+            }
+
+            // Filtro por nombre o código si se proporciona
+            if ($request->has('name') && $request->name) {
+                $searchTerm = $request->name;
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('name', 'like', '%' . $searchTerm . '%')
+                      ->orWhere('code_join_to', 'like', '%' . $searchTerm . '%');
+                });
+            }
+
+            // Ordenar por fecha de creación descendente (más reciente primero)
+            $query->orderBy('created_at', 'desc');
+
+            // Aplicar paginación: 5 partidas por página
+            // Laravel automáticamente obtiene el parámetro 'page' de la request
+            $gamesPaginated = $query->paginate(5);
+
+            // Formatear respuesta con los datos de la página actual
+            $gamesFormatted = $gamesPaginated->map(function ($game) {
+                return [
+                    'id' => $game->id,
+                    'name' => $game->name,
+                    'max_players' => $game->max_players,
+                    'current_players' => $game->users->count(),
+                    'status' => $game->status ? $game->status->name : 'unknown',
+                    'code_status' => $game->code_status,
+                    'code_join_to' => $game->code_join_to,
+                    'host' => [
+                        'id' => $game->userHost->id ?? null,
+                        'name' => $game->userHost->name ?? null,
+                        'nickname' => $game->userHost->nickname ?? null,
+                    ],
+                    'created_at' => $game->created_at,
+                    'updated_at' => $game->updated_at,
+                ];
+            });
+
+            // Devolver respuesta con estructura paginada
+            return response()->json([
+                'success' => true,
+                'data' => $gamesFormatted,
+                'pagination' => [
+                    'current_page' => $gamesPaginated->currentPage(),
+                    'last_page' => $gamesPaginated->lastPage(),
+                    'per_page' => $gamesPaginated->perPage(),
+                    'total' => $gamesPaginated->total(),
+                    'from' => $gamesPaginated->firstItem(),
+                    'to' => $gamesPaginated->lastItem(),
+                ],
+                'message' => 'Partidas obtenidas correctamente'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener las partidas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Ver detalles de una partida específica
+     */
+    public function show($id)
+    {
+        try {
+            $game = Game::with(['userHost:id,name,nickname,email', 'status:id,code_status,name', 'users:id,name,nickname'])
+                ->find($id);
+
+            if (!$game) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Partida no encontrada'
+                ], 404);
+            }
+
+            // Verificar que la partida no esté eliminada
+            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            if ($deletedStatus && $game->code_status === $deletedStatus->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Partida no encontrada'
+                ], 404);
+            }
+
+            $data = [
+                'id' => $game->id,
+                'name' => $game->name,
+                'max_players' => $game->max_players,
+                'current_players' => $game->users->count(),
+                'status' => [
+                    'id' => $game->status->id ?? null,
+                    'code' => $game->status->code_status ?? null,
+                    'name' => $game->status->name ?? 'unknown',
+                ],
+                'code_join_to' => $game->code_join_to,
+                'host' => [
+                    'id' => $game->userHost->id ?? null,
+                    'name' => $game->userHost->name ?? null,
+                    'nickname' => $game->userHost->nickname ?? null,
+                    'email' => $game->userHost->email ?? null,
+                ],
+                'players' => $game->users->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'nickname' => $user->nickname,
+                    ];
+                }),
+                'created_at' => $game->created_at,
+                'updated_at' => $game->updated_at,
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'message' => 'Partida obtenida correctamente'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener la partida: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Crear una nueva partida
+     */
+    public function store(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            $rules = [
+                'name' => 'required|string|max:255',
+                'max_players' => 'required|integer|min:4|max:20',
+            ];
+
+            $messages = [
+                'name.required' => 'El nombre de la partida es obligatorio.',
+                'name.string' => 'El nombre debe ser una cadena de caracteres.',
+                'name.max' => 'El nombre no puede exceder 255 caracteres.',
+                'max_players.required' => 'El número máximo de jugadores es obligatorio.',
+                'max_players.integer' => 'El número máximo de jugadores debe ser un número entero.',
+                'max_players.min' => 'El número mínimo de jugadores es 4.',
+                'max_players.max' => 'El número máximo de jugadores es 20.',
+            ];
+
+            $validator = Validator::make($request->all(), $rules, $messages);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Obtener el estado "created" o "waiting" (asumiendo que existe con id 1 o nombre "created")
+            $status = StatusCode::where('name', 'created')
+                ->orWhere('name', 'waiting')
+                ->orWhere('id', 1)
+                ->first();
+
+            if (!$status) {
+                // Si no existe, crear uno por defecto o usar el primero disponible
+                $status = StatusCode::first();
+                if (!$status) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No se encontró un estado válido para la partida'
+                    ], 500);
+                }
+            }
+
+            // Generar código único para unirse a la partida
+            $codeJoinTo = strtoupper(Str::random(6));
+
+            // Verificar que el código sea único
+            while (Game::where('code_join_to', $codeJoinTo)->exists()) {
+                $codeJoinTo = strtoupper(Str::random(6));
+            }
+
+            // Obtener un personaje por defecto (o crear uno si no existe)
+            $defaultCharacter = Character::first();
+            if (!$defaultCharacter) {
+                $defaultCharacter = Character::create(['name' => 'Aldeano']);
+            }
+
+            // Usar transacción para asegurar que la partida siempre tenga al menos un jugador
+            $game = DB::transaction(function () use ($user, $request, $codeJoinTo, $status, $defaultCharacter) {
+                // Crear la partida
+                $game = Game::create([
+                    'id_user_host' => $user->id,
+                    'name' => $request->name,
+                    'max_players' => $request->max_players,
+                    'code_join_to' => $codeJoinTo,
+                    'code_status' => $status->id,
+                ]);
+
+                // Agregar al host como jugador en la partida (obligatorio)
+                GameLobby::create([
+                    'id_game' => $game->id,
+                    'id_user' => $user->id,
+                    'id_character' => $defaultCharacter->id,
+                ]);
+
+                return $game;
+            });
+
+            $game->load(['userHost:id,name,nickname', 'status:id,code_status,name']);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $game->id,
+                    'name' => $game->name,
+                    'max_players' => $game->max_players,
+                    'code_join_to' => $game->code_join_to,
+                    'status' => $game->status->name ?? 'unknown',
+                    'host' => [
+                        'id' => $game->userHost->id,
+                        'name' => $game->userHost->name,
+                        'nickname' => $game->userHost->nickname,
+                    ],
+                ],
+                'message' => 'Partida creada correctamente'
+            ], 201);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear la partida: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar una partida
+     */
+    public function update(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            $game = Game::find($id);
+
+            if (!$game) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Partida no encontrada'
+                ], 404);
+            }
+
+            // Verificar que la partida no esté eliminada
+            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            if ($deletedStatus && $game->code_status === $deletedStatus->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede editar una partida eliminada'
+                ], 422);
+            }
+
+            // Solo el host o un admin puede editar la partida
+            $isAdmin = $user->tokenCan('admin');
+            if ($game->id_user_host !== $user->id && !$isAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para editar esta partida'
+                ], 403);
+            }
+
+            // No permitir editar si la partida está en progreso o finalizada
+            $statusInProgress = StatusCode::whereIn('name', ['in_progress', 'en_progreso', 'finished', 'finalizada'])
+                ->pluck('id')
+                ->toArray();
+
+            if (in_array($game->code_status, $statusInProgress)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede editar una partida en progreso o finalizada'
+                ], 422);
+            }
+
+            $rules = [
+                'name' => 'nullable|string|max:255',
+                'max_players' => 'nullable|integer|min:4|max:20',
+            ];
+
+            $messages = [
+                'name.string' => 'El nombre debe ser una cadena de caracteres.',
+                'name.max' => 'El nombre no puede exceder 255 caracteres.',
+                'max_players.integer' => 'El número máximo de jugadores debe ser un número entero.',
+                'max_players.min' => 'El número mínimo de jugadores es 4.',
+                'max_players.max' => 'El número máximo de jugadores es 20.',
+            ];
+
+            $validator = Validator::make($request->all(), $rules, $messages);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Verificar que max_players no sea menor que los jugadores actuales
+            $currentPlayers = $game->users->count();
+            if ($request->has('max_players') && $request->max_players < $currentPlayers) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "El número máximo de jugadores no puede ser menor que los jugadores actuales ($currentPlayers)"
+                ], 422);
+            }
+
+            if ($request->has('name')) {
+                $game->name = $request->name;
+            }
+
+            if ($request->has('max_players')) {
+                $game->max_players = $request->max_players;
+            }
+
+            $game->save();
+
+            $game->load(['userHost:id,name,nickname', 'status:id,code_status,name']);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $game->id,
+                    'name' => $game->name,
+                    'max_players' => $game->max_players,
+                    'status' => $game->status->name ?? 'unknown',
+                ],
+                'message' => 'Partida actualizada correctamente'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar la partida: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar una partida (soft delete - cambia el estado a "deleted")
+     */
+    public function destroy($id)
+    {
+        try {
+            $user = request()->user();
+            $game = Game::with('users')->find($id);
+
+            if (!$game) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Partida no encontrada'
+                ], 404);
+            }
+
+            // Verificar que la partida no esté ya eliminada
+            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            if ($deletedStatus && $game->code_status === $deletedStatus->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La partida ya está eliminada'
+                ], 422);
+            }
+
+            // Verificar permisos: admin puede eliminar cualquier partida, user solo si es host
+            $isAdmin = $user->tokenCan('admin');
+            $isHost = $game->id_user_host === $user->id;
+            
+            if (!$isAdmin && !$isHost) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para eliminar esta partida. Solo el host o un administrador puede eliminarla.'
+                ], 403);
+            }
+
+            // Obtener el estado "deleted" o crearlo si no existe
+            if (!$deletedStatus) {
+                $deletedStatus = StatusCode::create([
+                    'code_status' => 'DELETED',
+                    'name' => 'deleted',
+                ]);
+            }
+
+            // Soft delete: cambiar el estado a "deleted" en lugar de eliminar
+            $game->code_status = $deletedStatus->id;
+            $game->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Partida eliminada correctamente'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar la partida: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Unirse a una partida
+     */
+    public function join(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            $game = Game::with(['users', 'status'])->find($id);
+
+            if (!$game) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Partida no encontrada'
+                ], 404);
+            }
+
+            // Verificar que la partida no esté eliminada
+            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            if ($deletedStatus && $game->code_status === $deletedStatus->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede unir a una partida eliminada'
+                ], 422);
+            }
+
+            // Verificar que la partida no esté en progreso o finalizada
+            $statusBlocked = StatusCode::whereIn('name', ['in_progress', 'en_progreso', 'finished', 'finalizada'])
+                ->pluck('id')
+                ->toArray();
+
+            if (in_array($game->code_status, $statusBlocked)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede unir a una partida en progreso o finalizada'
+                ], 422);
+            }
+
+            // Verificar que el usuario no esté ya en la partida
+            $alreadyJoined = GameLobby::where('id_game', $game->id)
+                ->where('id_user', $user->id)
+                ->exists();
+
+            if ($alreadyJoined) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya estás unido a esta partida'
+                ], 422);
+            }
+
+            // Verificar que haya espacio disponible
+            $currentPlayers = $game->users->count();
+            if ($currentPlayers >= $game->max_players) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La partida está llena'
+                ], 422);
+            }
+
+            // Obtener un personaje por defecto (o crear uno si no existe)
+            $defaultCharacter = Character::first();
+            if (!$defaultCharacter) {
+                $defaultCharacter = Character::create(['name' => 'Aldeano']);
+            }
+
+            // Agregar al usuario a la partida
+            GameLobby::create([
+                'id_game' => $game->id,
+                'id_user' => $user->id,
+                'id_character' => $defaultCharacter->id,
+            ]);
+
+            $game->load(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $game->id,
+                    'name' => $game->name,
+                    'max_players' => $game->max_players,
+                    'current_players' => $game->users->count(),
+                    'status' => $game->status->name ?? 'unknown',
+                ],
+                'message' => 'Te has unido a la partida correctamente'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al unirse a la partida: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Abandonar una partida
+     * Si es el último jugador, elimina la partida automáticamente
+     */
+    public function leave(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            $game = Game::with(['users', 'status'])->find($id);
+
+            if (!$game) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Partida no encontrada'
+                ], 404);
+            }
+
+            // Verificar que la partida no esté eliminada
+            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            if ($deletedStatus && $game->code_status === $deletedStatus->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede abandonar una partida eliminada'
+                ], 422);
+            }
+
+            // Verificar que el usuario esté en la partida
+            $userInGame = GameLobby::where('id_game', $game->id)
+                ->where('id_user', $user->id)
+                ->first();
+
+            if (!$userInGame) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No estás unido a esta partida'
+                ], 422);
+            }
+
+            // Verificar que la partida no esté en progreso o finalizada
+            $statusBlocked = StatusCode::whereIn('name', ['in_progress', 'en_progreso', 'finished', 'finalizada'])
+                ->pluck('id')
+                ->toArray();
+
+            if (in_array($game->code_status, $statusBlocked)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede abandonar una partida en progreso o finalizada'
+                ], 422);
+            }
+
+            // Contar jugadores actuales
+            $currentPlayers = $game->users->count();
+
+            // Si es el host y hay más jugadores, no permitir abandonar (debe transferir el host o eliminar la partida)
+            if ($game->id_user_host === $user->id && $currentPlayers > 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No puedes abandonar la partida siendo el host. Debes eliminar la partida o transferir el host.'
+                ], 422);
+            }
+
+            // Eliminar al usuario de la partida
+            GameLobby::where('id_game', $game->id)
+                ->where('id_user', $user->id)
+                ->delete();
+
+            // Verificar si quedan jugadores
+            $remainingPlayers = GameLobby::where('id_game', $game->id)->count();
+
+            // Si no quedan jugadores, hacer soft delete (cambiar estado a "deleted")
+            if ($remainingPlayers === 0) {
+                // Obtener el estado "deleted" o crearlo si no existe
+                $deletedStatus = StatusCode::where('name', 'deleted')->first();
+                if (!$deletedStatus) {
+                    $deletedStatus = StatusCode::create([
+                        'code_status' => 'DELETED',
+                        'name' => 'deleted',
+                    ]);
+                }
+
+                // Soft delete: cambiar el estado a "deleted"
+                $game->code_status = $deletedStatus->id;
+                $game->save();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Has abandonado la partida. La partida ha sido eliminada por no tener jugadores.'
+                ], 200);
+            }
+
+            // Si era el host y quedan jugadores, asignar el host al primer jugador restante
+            if ($game->id_user_host === $user->id && $remainingPlayers > 0) {
+                $newHost = GameLobby::where('id_game', $game->id)->first();
+                if ($newHost) {
+                    $game->id_user_host = $newHost->id_user;
+                    $game->save();
+                }
+            }
+
+            $game->load(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $game->id,
+                    'name' => $game->name,
+                    'current_players' => $remainingPlayers,
+                ],
+                'message' => 'Has abandonado la partida correctamente'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al abandonar la partida: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+}
+
