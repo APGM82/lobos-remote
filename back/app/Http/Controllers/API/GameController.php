@@ -175,7 +175,7 @@ class GameController extends Controller
 
             $rules = [
                 'name' => 'required|string|max:255',
-                'max_players' => 'required|integer|min:4|max:20',
+                'max_players' => 'required|integer|min:15|max:30',
             ];
 
             $messages = [
@@ -184,8 +184,8 @@ class GameController extends Controller
                 'name.max' => 'El nombre no puede exceder 255 caracteres.',
                 'max_players.required' => 'El número máximo de jugadores es obligatorio.',
                 'max_players.integer' => 'El número máximo de jugadores debe ser un número entero.',
-                'max_players.min' => 'El número mínimo de jugadores es 4.',
-                'max_players.max' => 'El número máximo de jugadores es 20.',
+                'max_players.min' => 'El número mínimo de jugadores es 15.',
+                'max_players.max' => 'El número máximo de jugadores es 30.',
             ];
 
             $validator = Validator::make($request->all(), $rules, $messages);
@@ -330,8 +330,8 @@ class GameController extends Controller
                 'name.string' => 'El nombre debe ser una cadena de caracteres.',
                 'name.max' => 'El nombre no puede exceder 255 caracteres.',
                 'max_players.integer' => 'El número máximo de jugadores debe ser un número entero.',
-                'max_players.min' => 'El número mínimo de jugadores es 4.',
-                'max_players.max' => 'El número máximo de jugadores es 20.',
+                'max_players.min' => 'El número mínimo de jugadores es 15.',
+                'max_players.max' => 'El número máximo de jugadores es 30.',
             ];
 
             $validator = Validator::make($request->all(), $rules, $messages);
