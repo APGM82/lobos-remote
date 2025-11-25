@@ -51,8 +51,52 @@ const leaveGame = async (gameId: number) => {
     }
 }
 
+/**
+ * Inicia una partida
+ * @param gameId - ID de la partida
+ * @returns Promise con la respuesta del servidor
+ */
+const startGame = async (gameId: number) => {
+    try {
+        const token = getAuthToken()
+        return await fetch(`${apiUrl}/${gameId}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+    } catch (error) {
+        throw error
+    }
+}
+
+/**
+ * Actualiza los detalles de una partida
+ * @param gameId - ID de la partida
+ * @param payload - Datos a actualizar
+ * @returns Promise con la respuesta del servidor
+ */
+const updateGameDetails = async (gameId: number, payload: { name: string; max_players: number }) => {
+    try {
+        const token = getAuthToken()
+        return await fetch(`${apiUrl}/${gameId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+    } catch (error) {
+        throw error
+    }
+}
+
 export {
     getGameInfo,
-    leaveGame
+    leaveGame,
+    startGame,
+    updateGameDetails
 }
 

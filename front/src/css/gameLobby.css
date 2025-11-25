@@ -9,24 +9,27 @@
 
 .lobby-container {
     display: flex;
-    width: 95%;
-    max-width: 1400px;
-    gap: 20px;
-    height: calc(100vh - 200px);
+    flex-wrap: wrap;
+    width: min(1080px, 92%);
+    gap: 24px;
+    align-items: stretch;
+    justify-content: center;
+    margin: 0 auto;
+    min-height: calc(100vh - 220px);
 }
 
 /* Área de Lobby (Izquierda ~70%) */
 .lobby-area {
-    flex: 0 0 70%;
+    flex: 1 1 640px;
     display: flex;
     flex-direction: column;
     background-color: #FFFFFF;
     border: 1px solid #000000;
     border-radius: 10px;
     padding: 20px;
-    overflow-y: auto;
-    overflow-x: hidden;
+    gap: 12px;
     min-width: 0;
+    max-height: calc(100vh - 220px);
 }
 
 .lobby-title {
@@ -45,26 +48,23 @@
 }
 
 .cards-grid {
+    --card-gap: 16px;
     display: grid;
-    /* Las columnas y filas se establecerán dinámicamente via JavaScript */
-    gap: 20px;
-    justify-items: center;
-    align-items: center;
-    padding: 20px;
+    gap: var(--card-gap);
+    padding: 12px;
     width: 100%;
-    min-height: 400px;
-    /* Asegurar que el grid use todo el espacio disponible */
-    grid-auto-rows: auto;
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     align-content: start;
     justify-content: center;
-    /* Prevenir scroll horizontal */
-    overflow-x: hidden;
+    justify-items: stretch;
+    align-items: stretch;
     box-sizing: border-box;
 }
 
 /* Estilos para las cartas en forma de diamante */
 .card-wrapper {
-    /* El tamaño se establecerá dinámicamente via JavaScript */
     position: relative;
     display: flex;
     justify-content: center;
@@ -149,21 +149,25 @@
 
 /* Área de Chat (Derecha ~30%) */
 .chat-area {
-    flex: 0 0 30%;
+    flex: 1 1 320px;
     display: flex;
     flex-direction: column;
     background-color: #FFFFFF;
     border: 1px solid #000000;
     border-radius: 10px;
     padding: 15px;
-    min-width: 300px;
+    min-width: 260px;
+    max-width: 380px;
+    max-height: calc(100vh - 220px);
+    overflow: hidden;
+    gap: 12px;
 }
 
 .chat-header {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 15px;
+    margin: 0;
     border-bottom: 2px solid #000000;
     padding-bottom: 10px;
 }
@@ -185,14 +189,12 @@
 
 .chat-messages {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     border: 1px solid #ddd;
     border-radius: 5px;
     padding: 10px;
-    margin-bottom: 15px;
     background-color: #f9f9f9;
-    min-height: 300px;
-    max-height: 400px;
 }
 
 .chat-message {
@@ -210,7 +212,8 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-bottom: 15px;
+    margin: 0;
+    flex-shrink: 0;
 }
 
 .chat-input {
@@ -227,6 +230,51 @@
     padding: 10px;
     border-radius: 5px;
     font-size: 0.9em;
+    flex-shrink: 0;
+}
+
+.start-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    flex-shrink: 0;
+}
+
+.start-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.modal-body .modal-field {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+}
+
+.modal-body .modal-field label {
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #1B2A4A;
+}
+
+.modal-body .modal-field:not(:last-child) {
+    margin-bottom: 12px;
+}
+
+.edit-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    flex-shrink: 0;
+}
+
+.edit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .abandon-btn {
@@ -246,17 +294,27 @@
 @media (max-width: 1024px) {
     .lobby-container {
         flex-direction: column;
-        height: auto;
+        min-height: auto;
     }
 
     .lobby-area {
         flex: 1;
-        min-height: 500px;
+        max-height: none;
+        min-height: 480px;
     }
 
     .chat-area {
         flex: 1;
-        min-height: 400px;
+        min-width: 100%;
+        max-width: none;
+        min-height: 360px;
+        max-height: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .cards-grid {
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
     }
 }
 

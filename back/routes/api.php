@@ -70,6 +70,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/findGame/{id}', [GameController::class, 'destroy'])->whereNumber('id');
     Route::post('/findGame/{id}/join', [GameController::class, 'join'])->whereNumber('id');
     Route::post('/findGame/{id}/leave', [GameController::class, 'leave'])->whereNumber('id');
+    Route::post('/findGame/{id}/start', [GameController::class, 'start'])->whereNumber('id');
 
     // Rutas de usuarios (requiere autenticación)
     Route::middleware(['user'])->group(function () {

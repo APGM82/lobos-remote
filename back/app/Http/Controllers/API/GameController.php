@@ -173,6 +173,29 @@ class GameController extends Controller
         try {
             $user = $request->user();
 
+            // Verificar si el usuario ya es host de otra partida activa
+            $activeStatuses = StatusCode::whereIn('name', ['en_espera', 'en_progreso', 'en_curso'])
+                ->pluck('id')
+                ->toArray();
+
+            if (!empty($activeStatuses)) {
+                $existingGame = Game::where('id_user_host', $user->id)
+                    ->whereIn('code_status', $activeStatuses)
+                    ->first();
+
+                if ($existingGame) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Ya eres host de una partida activa. Debes finalizar o transferir tu partida actual antes de crear una nueva.',
+                        'current_game' => [
+                            'id' => $existingGame->id,
+                            'name' => $existingGame->name,
+                            'status' => $existingGame->status->name ?? 'unknown'
+                        ]
+                    ], 422);
+                }
+            }
+
             $rules = [
                 'name' => 'required|string|max:255',
                 'max_players' => 'required|integer|min:15|max:30',
@@ -344,7 +367,7 @@ class GameController extends Controller
 
             $rules = [
                 'name' => 'nullable|string|max:255',
-                'max_players' => 'nullable|integer|min:4|max:20',
+                'max_players' => 'nullable|integer|min:15|max:30',
             ];
 
             $messages = [
@@ -608,6 +631,105 @@ class GameController extends Controller
     }
 
     /**
+     * Iniciar una partida (cambiar estado a en progreso)
+     */
+    public function start(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            $game = Game::with(['users', 'status', 'userHost'])->find($id);
+
+            if (!$game) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Partida no encontrada'
+                ], 404);
+            }
+
+            $deletedStatus = StatusCode::where('name', 'eliminada')->first();
+            if ($deletedStatus && $game->code_status === $deletedStatus->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede iniciar una partida eliminada'
+                ], 422);
+            }
+
+            $isAdmin = $user->tokenCan('admin');
+            if ($game->id_user_host !== $user->id && !$isAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para iniciar esta partida'
+                ], 403);
+            }
+
+            $statusInProgress = StatusCode::where('name', 'en_progreso')->first();
+            if (!$statusInProgress) {
+                $statusInProgress = StatusCode::create([
+                    'code_status' => 'IN_PROGRESS',
+                    'name' => 'en_progreso',
+                ]);
+            }
+
+            $statusFinished = StatusCode::where('name', 'finalizada')->first();
+            if ($statusFinished && $game->code_status === $statusFinished->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La partida ya ha finalizado'
+                ], 422);
+            }
+
+            if ($game->code_status === $statusInProgress->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La partida ya está en progreso'
+                ], 422);
+            }
+
+            $currentPlayers = $game->users->count();
+            if ($currentPlayers < $game->max_players) {
+                $remaining = $game->max_players - $currentPlayers;
+                return response()->json([
+                    'success' => false,
+                    'message' => "No se puede iniciar la partida. Faltan {$remaining} jugador(es)."
+                ], 422);
+            }
+
+            $game->code_status = $statusInProgress->id;
+            $game->save();
+
+            $game->load(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $game->id,
+                    'name' => $game->name,
+                    'max_players' => $game->max_players,
+                    'current_players' => $game->users->count(),
+                    'status' => [
+                        'id' => $game->status->id ?? null,
+                        'code' => $game->status->code_status ?? null,
+                        'name' => $game->status->name ?? 'unknown',
+                    ],
+                    'players' => $game->users->map(function ($player) {
+                        return [
+                            'id' => $player->id,
+                            'name' => $player->name,
+                            'nickname' => $player->nickname,
+                        ];
+                    }),
+                ],
+                'message' => 'La partida ha comenzado correctamente'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al iniciar la partida: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Abandonar una partida
      * Si es el último jugador, elimina la partida automáticamente
      */
@@ -642,18 +764,6 @@ class GameController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'No estás unido a esta partida'
-                ], 422);
-            }
-
-            // Verificar que la partida no esté en progreso o finalizada
-            $statusBlocked = StatusCode::whereIn('name', ['en_progreso', 'finalizada'])
-                ->pluck('id')
-                ->toArray();
-
-            if (in_array($game->code_status, $statusBlocked)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se puede abandonar una partida en progreso o finalizada'
                 ], 422);
             }
 

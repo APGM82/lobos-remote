@@ -621,7 +621,7 @@ const handleUpdateGame = async () => {
     }
 
     if (isNaN(maxPlayers) || maxPlayers < 15 || maxPlayers > 30) {
-        alert('El número máximo de jugadores debe estar entre 4 y 20')
+        alert('El número máximo de jugadores debe estar entre 15 y 30')
         return
     }
 
@@ -717,7 +717,7 @@ const handleCreateGame = () => {
     const maxPlayersInput = document.getElementById('createGameMaxPlayers') as HTMLInputElement
 
     nameInput.value = ''
-    maxPlayersInput.value = '8'
+    maxPlayersInput.value = '15'
 
     createModal.style.display = 'flex'
 }
@@ -734,8 +734,8 @@ const handleSaveGame = async () => {
         return
     }
 
-    if (isNaN(maxPlayers) || maxPlayers < 4 || maxPlayers > 20) {
-        alert('El número máximo de jugadores debe estar entre 4 y 20')
+    if (isNaN(maxPlayers) || maxPlayers < 15 || maxPlayers > 30) {
+        alert('El número máximo de jugadores debe estar entre 15 y 30')
         return
     }
 
@@ -777,6 +777,11 @@ const handleSaveGame = async () => {
             if (data.errors) {
                 const errorMessages = Object.values(data.errors).flat()
                 alert(errorMessages.join(', '))
+            } else if (data.current_game && data.current_game.id) {
+                const redirect = confirm(`${data.message || 'Ya tienes una partida activa.'} ¿Quieres ir a tu lobby actual?`)
+                if (redirect) {
+                    window.location.href = `${routes.gameLobby}?gameId=${data.current_game.id}`
+                }
             } else {
                 alert(data.message || 'Error al crear la partida')
             }
