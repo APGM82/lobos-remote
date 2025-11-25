@@ -544,7 +544,7 @@ const handleUpdateGame = async () => {
         return
     }
 
-    if (isNaN(maxPlayers) || maxPlayers < 4 || maxPlayers > 20) {
+    if (isNaN(maxPlayers) || maxPlayers < 15 || maxPlayers > 30) {
         alert('El número máximo de jugadores debe estar entre 4 y 20')
         return
     }
@@ -774,7 +774,7 @@ const generateModals = () => {
                         <input type="text" id="createGameName" placeholder="Nombre de la partida" required>
                     </div>
                     <div>
-                        <label for="createGameMaxPlayers">Máximo de jugadores (4-20):</label>
+                        <label for="createGameMaxPlayers">Máximo de jugadores (15-30):</label>
                         <input type="number" id="createGameMaxPlayers" min="4" max="20" value="8" required>
                     </div>
                 </div>
