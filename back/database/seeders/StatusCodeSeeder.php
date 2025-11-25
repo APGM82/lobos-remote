@@ -13,41 +13,41 @@ class StatusCodeSeeder extends Seeder
      */
     public function run(): void
     {
-        // Estados de partidas
+        // Estados de partidas en español
         $statuses = [
             [
                 'code_status' => 'CREATED',
-                'name' => 'created',
+                'name' => 'creada',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'code_status' => 'WAITING',
-                'name' => 'waiting',
+                'name' => 'en_espera',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'code_status' => 'IN_PROGRESS',
-                'name' => 'in_progress',
+                'name' => 'en_progreso',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'code_status' => 'FINISHED',
-                'name' => 'finished',
+                'name' => 'finalizada',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'code_status' => 'CANCELLED',
-                'name' => 'cancelled',
+                'name' => 'cancelada',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'code_status' => 'DELETED',
-                'name' => 'deleted',
+                'name' => 'eliminada',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

@@ -1,5 +1,7 @@
 import { getGames, getFilterGames, createGame, joinGame, viewGame, updateGame, deleteGame } from './CrudGame.ts'
 import { requireAuth, getToken } from '../auth.ts'
+import routes from '../routes.ts'
+import { leaveGame } from '../gameLobby/CrudLobby.ts'
 
 let selectedGame: any = null
 let currentUser: any = null
@@ -210,8 +212,17 @@ const chargeTable = (games: any[]) => {
             joinButton.classList.add('btn', 'success')
             joinButton.value = game.id.toString()
             joinButton.textContent = 'Unirse'
-            joinButton.addEventListener('click', () => {
-                handleJoinGame(game.id)
+            joinButton.addEventListener('click', (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                // Asegurar que game.id sea un número
+                const gameId = typeof game.id === 'number' ? game.id : parseInt(game.id, 10)
+                if (isNaN(gameId)) {
+                    console.error('ID de partida inválido:', game.id)
+                    alert('Error: ID de partida inválido')
+                    return
+                }
+                handleJoinGame(gameId)
             })
             div.appendChild(joinButton)
         }
@@ -452,8 +463,54 @@ const renderPagination = (pagination: any) => {
     container.appendChild(paginationDiv)
 }
 
+/**
+ * Abandona la partida actual y se une a una nueva
+ */
+const handleLeaveAndJoin = async (currentGameId: number, newGameId: number) => {
+    try {
+        console.log('Abandonando partida actual:', currentGameId)
+        const leaveResponse = await leaveGame(currentGameId)
+        
+        if (!leaveResponse.ok) {
+            if (leaveResponse.status === 401) {
+                window.location.href = 'login.html'
+                return
+            }
+            const leaveText = await leaveResponse.text()
+            try {
+                const leaveData = JSON.parse(leaveText)
+                alert(leaveData.message || 'Error al abandonar la partida actual')
+            } catch {
+                alert(`Error ${leaveResponse.status} al abandonar la partida`)
+            }
+            return
+        }
+        
+        const leaveData = await leaveResponse.json()
+        
+        if (leaveData.success) {
+            console.log('Partida abandonada, uniéndose a la nueva:', newGameId)
+            // Ahora intentar unirse a la nueva partida
+            await handleJoinGame(newGameId)
+        } else {
+            alert(leaveData.message || 'Error al abandonar la partida actual')
+        }
+    } catch (error) {
+        console.error('Error al abandonar y unirse:', error)
+        alert('Error de conexión al abandonar la partida')
+    }
+}
+
 const handleJoinGame = async (gameId: number) => {
     try {
+        // Validar que gameId sea un número válido
+        if (!gameId || isNaN(gameId)) {
+            console.error('ID de partida inválido:', gameId)
+            alert('Error: ID de partida inválido')
+            return
+        }
+
+        console.log('Intentando unirse a la partida:', gameId)
         const response = await joinGame(gameId)
         
         if (!response.ok) {
@@ -462,8 +519,26 @@ const handleJoinGame = async (gameId: number) => {
                 return
             }
             const text = await response.text()
+            console.error('Error del servidor:', response.status, text)
             try {
                 const data = JSON.parse(text)
+                // Si el usuario ya está unido a esta partida, redirigir al lobby
+                if (response.status === 422 && data.message && data.message.includes('Ya estás unido a esta partida')) {
+                    console.log('Usuario ya está unido a esta partida, redirigiendo al lobby')
+                    window.location.href = `${routes.gameLobby}?gameId=${gameId}`
+                    return
+                }
+                // Si el usuario está en otra partida activa, preguntar si quiere abandonarla
+                if (response.status === 422 && data.message && data.message.includes('Ya estás unido a otra partida') && data.current_game) {
+                    const currentGameName = data.current_game.name || 'la partida actual'
+                    const confirmed = confirm(`Ya estás unido a la partida "${currentGameName}". ¿Quieres abandonarla para unirte a esta nueva partida?`)
+                    
+                    if (confirmed) {
+                        // Abandonar la partida actual y luego unirse a la nueva
+                        await handleLeaveAndJoin(data.current_game.id, gameId)
+                    }
+                    return
+                }
                 alert(data.message || 'Error al unirse a la partida')
             } catch {
                 alert(`Error ${response.status}: ${text.substring(0, 100)}`)
@@ -472,17 +547,18 @@ const handleJoinGame = async (gameId: number) => {
         }
         
         const data = await response.json()
+        console.log('Respuesta del servidor:', data)
 
         if (data.success) {
-            alert('Te has unido a la partida correctamente')
-            currentPage = 1 // Resetear a la primera página
-            showGames()
+            // Redirigir al lobby de la partida
+            console.log('Redirigiendo al lobby de la partida:', gameId)
+            window.location.href = `${routes.gameLobby}?gameId=${gameId}`
         } else {
             alert(data.message || 'Error al unirse a la partida')
         }
     } catch (error) {
         console.error('Error al unirse a la partida:', error)
-        alert('Error de conexión al unirse a la partida')
+        alert('Error de conexión al unirse a la partida: ' + (error instanceof Error ? error.message : String(error)))
     }
 }
 
@@ -691,12 +767,12 @@ const handleSaveGame = async () => {
 
         const data = await response.json()
 
-        if (data.success) {
-            alert('Partida creada correctamente')
+        if (data.success && data.data && data.data.id) {
+            // Cerrar el modal
             const createModal = document.getElementById('createGameModal') as HTMLElement
             createModal.style.display = 'none'
-            currentPage = 1 // Resetear a la primera página para ver la nueva partida
-            showGames()
+            // Redirigir al lobby de la partida recién creada
+            window.location.href = `${routes.gameLobby}?gameId=${data.data.id}`
         } else {
             if (data.errors) {
                 const errorMessages = Object.values(data.errors).flat()

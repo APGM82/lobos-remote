@@ -28,7 +28,7 @@ class GameController extends Controller
             $query = Game::with(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
 
             // Manejar partidas eliminadas según el parámetro
-            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            $deletedStatus = StatusCode::where('name', 'eliminada')->first();
             $includeDeleted = $request->has('include_deleted') && $request->include_deleted === 'true' && $isAdmin;
             
             if ($deletedStatus) {
@@ -116,7 +116,7 @@ class GameController extends Controller
             }
 
             // Verificar que la partida no esté eliminada
-            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            $deletedStatus = StatusCode::where('name', 'eliminada')->first();
             if ($deletedStatus && $game->code_status === $deletedStatus->id) {
                 return response()->json([
                     'success' => false,
@@ -197,11 +197,21 @@ class GameController extends Controller
                 ], 422);
             }
 
-            // Obtener el estado "created" o "waiting" (asumiendo que existe con id 1 o nombre "created")
-            $status = StatusCode::where('name', 'created')
-                ->orWhere('name', 'waiting')
-                ->orWhere('id', 1)
-                ->first();
+            // Obtener el estado "en_espera" para nuevas partidas
+            $status = StatusCode::where('name', 'en_espera')->first();
+            
+            // Si no existe "en_espera", intentar con "creada" como fallback
+            if (!$status) {
+                $status = StatusCode::where('name', 'creada')->first();
+            }
+            
+            // Si tampoco existe "created", usar el primero disponible o el id 1
+            if (!$status) {
+                $status = StatusCode::where('id', 1)->first();
+                if (!$status) {
+                    $status = StatusCode::first();
+                }
+            }
 
             if (!$status) {
                 // Si no existe, crear uno por defecto o usar el primero disponible
@@ -244,12 +254,15 @@ class GameController extends Controller
                     'id_game' => $game->id,
                     'id_user' => $user->id,
                     'id_character' => $defaultCharacter->id,
+                    'is_alive' => true,
                 ]);
-
+                
                 return $game;
             });
 
-            $game->load(['userHost:id,name,nickname', 'status:id,code_status,name']);
+            // Recargar el juego desde la BD con todas las relaciones para asegurar datos actualizados
+            $game = Game::with(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname'])
+                ->find($game->id);
 
             return response()->json([
                 'success' => true,
@@ -257,6 +270,7 @@ class GameController extends Controller
                     'id' => $game->id,
                     'name' => $game->name,
                     'max_players' => $game->max_players,
+                    'current_players' => $game->users->count(),
                     'code_join_to' => $game->code_join_to,
                     'status' => $game->status->name ?? 'unknown',
                     'host' => [
@@ -264,8 +278,15 @@ class GameController extends Controller
                         'name' => $game->userHost->name,
                         'nickname' => $game->userHost->nickname,
                     ],
+                    'players' => $game->users->map(function ($user) {
+                        return [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'nickname' => $user->nickname,
+                        ];
+                    }),
                 ],
-                'message' => 'Partida creada correctamente'
+                'message' => 'Partida creada correctamente. El host se ha unido automáticamente.'
             ], 201);
         } catch (Exception $e) {
             return response()->json([
@@ -292,7 +313,7 @@ class GameController extends Controller
             }
 
             // Verificar que la partida no esté eliminada
-            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            $deletedStatus = StatusCode::where('name', 'eliminada')->first();
             if ($deletedStatus && $game->code_status === $deletedStatus->id) {
                 return response()->json([
                     'success' => false,
@@ -310,7 +331,7 @@ class GameController extends Controller
             }
 
             // No permitir editar si la partida está en progreso o finalizada
-            $statusInProgress = StatusCode::whereIn('name', ['in_progress', 'en_progreso', 'finished', 'finalizada'])
+            $statusInProgress = StatusCode::whereIn('name', ['en_progreso', 'finalizada'])
                 ->pluck('id')
                 ->toArray();
 
@@ -399,7 +420,7 @@ class GameController extends Controller
             }
 
             // Verificar que la partida no esté ya eliminada
-            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            $deletedStatus = StatusCode::where('name', 'eliminada')->first();
             if ($deletedStatus && $game->code_status === $deletedStatus->id) {
                 return response()->json([
                     'success' => false,
@@ -459,7 +480,7 @@ class GameController extends Controller
             }
 
             // Verificar que la partida no esté eliminada
-            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            $deletedStatus = StatusCode::where('name', 'eliminada')->first();
             if ($deletedStatus && $game->code_status === $deletedStatus->id) {
                 return response()->json([
                     'success' => false,
@@ -468,7 +489,7 @@ class GameController extends Controller
             }
 
             // Verificar que la partida no esté en progreso o finalizada
-            $statusBlocked = StatusCode::whereIn('name', ['in_progress', 'en_progreso', 'finished', 'finalizada'])
+            $statusBlocked = StatusCode::whereIn('name', ['en_progreso', 'finalizada'])
                 ->pluck('id')
                 ->toArray();
 
@@ -491,8 +512,42 @@ class GameController extends Controller
                 ], 422);
             }
 
-            // Verificar que haya espacio disponible
-            $currentPlayers = $game->users->count();
+            // Verificar que el usuario no esté en otra partida activa
+            $userLobbies = GameLobby::where('id_user', $user->id)->pluck('id_game');
+            
+            if ($userLobbies->isNotEmpty()) {
+                // Obtener estados bloqueados (eliminadas, finalizadas)
+                // $deletedStatus ya está definido arriba
+                $finishedStatuses = StatusCode::whereIn('name', ['finalizada'])
+                    ->pluck('id')
+                    ->toArray();
+                
+                $blockedStatusIds = $finishedStatuses;
+                if ($deletedStatus) {
+                    $blockedStatusIds[] = $deletedStatus->id;
+                }
+                
+                // Verificar si el usuario está en alguna partida que NO esté eliminada o finalizada
+                $activeGame = Game::whereIn('id', $userLobbies)
+                    ->whereNotIn('code_status', $blockedStatusIds)
+                    ->with(['status:id,code_status,name'])
+                    ->first();
+                
+                if ($activeGame) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Ya estás unido a otra partida. Debes abandonar tu partida actual antes de unirte a una nueva.',
+                        'current_game' => [
+                            'id' => $activeGame->id,
+                            'name' => $activeGame->name,
+                            'status' => $activeGame->status ? $activeGame->status->name : 'unknown'
+                        ]
+                    ], 422);
+                }
+            }
+
+            // Verificar que haya espacio disponible (contar directamente desde la BD)
+            $currentPlayers = GameLobby::where('id_game', $game->id)->count();
             if ($currentPlayers >= $game->max_players) {
                 return response()->json([
                     'success' => false,
@@ -507,13 +562,24 @@ class GameController extends Controller
             }
 
             // Agregar al usuario a la partida
-            GameLobby::create([
+            $lobbyCreated = GameLobby::create([
                 'id_game' => $game->id,
                 'id_user' => $user->id,
                 'id_character' => $defaultCharacter->id,
+                'is_alive' => true,
             ]);
 
-            $game->load(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
+            // Verificar que se creó correctamente
+            if (!$lobbyCreated) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al unirse a la partida'
+                ], 500);
+            }
+
+            // Recargar el juego desde la BD con todas las relaciones para asegurar datos actualizados
+            $game = Game::with(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname'])
+                ->find($game->id);
 
             return response()->json([
                 'success' => true,
@@ -523,6 +589,13 @@ class GameController extends Controller
                     'max_players' => $game->max_players,
                     'current_players' => $game->users->count(),
                     'status' => $game->status->name ?? 'unknown',
+                    'players' => $game->users->map(function ($user) {
+                        return [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'nickname' => $user->nickname,
+                        ];
+                    }),
                 ],
                 'message' => 'Te has unido a la partida correctamente'
             ], 200);
@@ -552,7 +625,7 @@ class GameController extends Controller
             }
 
             // Verificar que la partida no esté eliminada
-            $deletedStatus = StatusCode::where('name', 'deleted')->first();
+            $deletedStatus = StatusCode::where('name', 'eliminada')->first();
             if ($deletedStatus && $game->code_status === $deletedStatus->id) {
                 return response()->json([
                     'success' => false,
@@ -573,7 +646,7 @@ class GameController extends Controller
             }
 
             // Verificar que la partida no esté en progreso o finalizada
-            $statusBlocked = StatusCode::whereIn('name', ['in_progress', 'en_progreso', 'finished', 'finalizada'])
+            $statusBlocked = StatusCode::whereIn('name', ['en_progreso', 'finalizada'])
                 ->pluck('id')
                 ->toArray();
 
@@ -606,7 +679,7 @@ class GameController extends Controller
             // Si no quedan jugadores, hacer soft delete (cambiar estado a "deleted")
             if ($remainingPlayers === 0) {
                 // Obtener el estado "deleted" o crearlo si no existe
-                $deletedStatus = StatusCode::where('name', 'deleted')->first();
+                $deletedStatus = StatusCode::where('name', 'eliminada')->first();
                 if (!$deletedStatus) {
                     $deletedStatus = StatusCode::create([
                         'code_status' => 'DELETED',

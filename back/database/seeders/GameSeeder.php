@@ -42,11 +42,11 @@ class GameSeeder extends Seeder
             ]);
         }
 
-        // Obtener estados específicos
-        $statusCreated = StatusCode::where('name', 'created')->first();
-        $statusWaiting = StatusCode::where('name', 'waiting')->first();
-        $statusInProgress = StatusCode::where('name', 'in_progress')->first();
-        $statusFinished = StatusCode::where('name', 'finished')->first();
+        // Obtener estados específicos (en español)
+        $statusCreated = StatusCode::where('name', 'creada')->first();
+        $statusWaiting = StatusCode::where('name', 'en_espera')->first();
+        $statusInProgress = StatusCode::where('name', 'en_progreso')->first();
+        $statusFinished = StatusCode::where('name', 'finalizada')->first();
 
         // Crear partidas de ejemplo
         $games = [
@@ -180,6 +180,7 @@ class GameSeeder extends Seeder
                             'id_game' => $game->id,
                             'id_user' => $player->id,
                             'id_character' => $defaultCharacter->id,
+                            'is_alive' => true,
                         ]);
                     }
                 }
@@ -192,6 +193,7 @@ class GameSeeder extends Seeder
                         'id_game' => $game->id,
                         'id_user' => $host->id,
                         'id_character' => $defaultCharacter->id,
+                        'is_alive' => true,
                     ]);
                     $finalPlayerCount = 1;
                 }

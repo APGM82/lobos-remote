@@ -1,0 +1,265 @@
+.lobby-main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    width: 100%;
+}
+
+.lobby-container {
+    display: flex;
+    width: 95%;
+    max-width: 1400px;
+    gap: 20px;
+    height: calc(100vh - 200px);
+}
+
+/* Área de Lobby (Izquierda ~70%) */
+.lobby-area {
+    flex: 0 0 70%;
+    display: flex;
+    flex-direction: column;
+    background-color: #FFFFFF;
+    border: 1px solid #000000;
+    border-radius: 10px;
+    padding: 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-width: 0;
+}
+
+.lobby-title {
+    text-align: center;
+    font-size: 1.8em;
+    margin: 0 0 10px 0;
+    color: #1B2A4A;
+    font-weight: bold;
+}
+
+.lobby-instruction {
+    text-align: center;
+    font-size: 1em;
+    margin: 0 0 20px 0;
+    color: #1B2A4A;
+}
+
+.cards-grid {
+    display: grid;
+    /* Las columnas y filas se establecerán dinámicamente via JavaScript */
+    gap: 20px;
+    justify-items: center;
+    align-items: center;
+    padding: 20px;
+    width: 100%;
+    min-height: 400px;
+    /* Asegurar que el grid use todo el espacio disponible */
+    grid-auto-rows: auto;
+    align-content: start;
+    justify-content: center;
+    /* Prevenir scroll horizontal */
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+/* Estilos para las cartas en forma de diamante */
+.card-wrapper {
+    /* El tamaño se establecerá dinámicamente via JavaScript */
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    box-sizing: border-box;
+    /* Asegurar que las cartas mantengan proporción cuadrada y ocupen todo el espacio disponible */
+    aspect-ratio: 1;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.card-diamond {
+    width: calc(100% - 20px);
+    height: calc(100% - 20px);
+    border: 2px solid #000000;
+    background-color: #FFFFFF;
+    transform: rotate(45deg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+.card-diamond:hover:not(.disabled) {
+    background-color: #f0f0f0;
+    border-color: #AA4465;
+    transform: rotate(45deg) scale(1.05);
+}
+
+.card-diamond.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background-color: #e0e0e0;
+}
+
+.card-content {
+    transform: rotate(-45deg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.card-image {
+    width: 45px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 3px;
+    flex-shrink: 0;
+}
+
+.card-nickname {
+    font-weight: bold;
+    color: #1B2A4A;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.2;
+    word-break: break-word;
+    /* El max-width y font-size se establecerán dinámicamente via JavaScript */
+}
+
+.card-label {
+    font-size: 0.6em;
+    color: #666;
+    margin-top: 2px;
+    line-height: 1.2;
+}
+
+/* Área de Chat (Derecha ~30%) */
+.chat-area {
+    flex: 0 0 30%;
+    display: flex;
+    flex-direction: column;
+    background-color: #FFFFFF;
+    border: 1px solid #000000;
+    border-radius: 10px;
+    padding: 15px;
+    min-width: 300px;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #000000;
+    padding-bottom: 10px;
+}
+
+.chat-title {
+    font-size: 1.3em;
+    margin: 0;
+    color: #1B2A4A;
+    font-weight: bold;
+}
+
+.chat-status-indicator {
+    width: 12px;
+    height: 12px;
+    background-color: #1bd61b;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 15px;
+    background-color: #f9f9f9;
+    min-height: 300px;
+    max-height: 400px;
+}
+
+.chat-message {
+    padding: 5px 0;
+    font-size: 0.9em;
+    color: #1B2A4A;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.chat-message:last-child {
+    border-bottom: none;
+}
+
+.chat-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.chat-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 0.9em;
+    box-sizing: border-box;
+}
+
+.chat-send-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+.abandon-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    background-color: #fd1b1b;
+    color: #CDD6D0;
+}
+
+.abandon-btn:hover {
+    background-color: #b21313;
+}
+
+/* Diseño Responsive */
+@media (max-width: 1024px) {
+    .lobby-container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .lobby-area {
+        flex: 1;
+        min-height: 500px;
+    }
+
+    .chat-area {
+        flex: 1;
+        min-height: 400px;
+    }
+}
+
+/* Los estilos de grid y tamaño de cartas se manejan dinámicamente via JavaScript */
+/* Los media queries solo ajustan el layout general */
+

@@ -64,7 +64,7 @@ class GameFactory extends Factory
     public function created(): static
     {
         return $this->state(function (array $attributes) {
-            $status = StatusCode::where('name', 'created')->first() 
+            $status = StatusCode::where('name', 'creada')->first() 
                 ?? StatusCode::factory()->created()->create();
             
             return [
@@ -79,7 +79,7 @@ class GameFactory extends Factory
     public function waiting(): static
     {
         return $this->state(function (array $attributes) {
-            $status = StatusCode::where('name', 'waiting')->first() 
+            $status = StatusCode::where('name', 'en_espera')->first() 
                 ?? StatusCode::factory()->waiting()->create();
             
             return [
@@ -94,7 +94,7 @@ class GameFactory extends Factory
     public function inProgress(): static
     {
         return $this->state(function (array $attributes) {
-            $status = StatusCode::where('name', 'in_progress')->first() 
+            $status = StatusCode::where('name', 'en_progreso')->first() 
                 ?? StatusCode::factory()->inProgress()->create();
             
             return [
@@ -109,7 +109,7 @@ class GameFactory extends Factory
     public function finished(): static
     {
         return $this->state(function (array $attributes) {
-            $status = StatusCode::where('name', 'finished')->first() 
+            $status = StatusCode::where('name', 'finalizada')->first() 
                 ?? StatusCode::factory()->finished()->create();
             
             return [

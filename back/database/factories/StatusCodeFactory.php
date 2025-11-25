@@ -21,11 +21,11 @@ class StatusCodeFactory extends Factory
     public function definition(): array
     {
         $statusNames = [
-            'created',
-            'waiting',
-            'in_progress',
-            'finished',
-            'cancelled'
+            'creada',
+            'en_espera',
+            'en_progreso',
+            'finalizada',
+            'cancelada'
         ];
 
         $name = $this->faker->unique()->randomElement($statusNames);
@@ -43,7 +43,7 @@ class StatusCodeFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'code_status' => 'CREATED',
-            'name' => 'created',
+            'name' => 'creada',
         ]);
     }
 
@@ -54,7 +54,7 @@ class StatusCodeFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'code_status' => 'WAITING',
-            'name' => 'waiting',
+            'name' => 'en_espera',
         ]);
     }
 
@@ -65,7 +65,7 @@ class StatusCodeFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'code_status' => 'IN_PROGRESS',
-            'name' => 'in_progress',
+            'name' => 'en_progreso',
         ]);
     }
 
@@ -76,7 +76,7 @@ class StatusCodeFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'code_status' => 'FINISHED',
-            'name' => 'finished',
+            'name' => 'finalizada',
         ]);
     }
 
@@ -87,7 +87,7 @@ class StatusCodeFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'code_status' => 'CANCELLED',
-            'name' => 'cancelled',
+            'name' => 'cancelada',
         ]);
     }
 
@@ -98,7 +98,7 @@ class StatusCodeFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'code_status' => 'DELETED',
-            'name' => 'deleted',
+            'name' => 'eliminada',
         ]);
     }
 }
