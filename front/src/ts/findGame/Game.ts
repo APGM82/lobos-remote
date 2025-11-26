@@ -1,4 +1,4 @@
-import { getGames, getFilterGames, createGame, joinGame, viewGame, updateGame, deleteGame } from './CrudGame.ts'
+import { getGames, getFilterGames, getFinishedGames, createGame, joinGame, viewGame, updateGame, deleteGame, getActiveGame as getActiveGameAPI } from './CrudGame.ts'
 import { requireAuth, getToken } from '../auth.ts'
 import routes from '../routes.ts'
 import { leaveGame } from '../gameLobby/CrudLobby.ts'
@@ -9,6 +9,7 @@ let isAdmin = false
 let currentPage = 1 // Página actual de la paginación
 let currentFilter = '' // Filtro de búsqueda actual para mantenerlo al cambiar de página
 let paginationInfo: any = null // Información de paginación recibida del backend
+let showFinishedOnly = false // Flag para mostrar solo partidas finalizadas
 
 // Verificar si el usuario es admin
 const checkAdminStatus = async () => {
@@ -44,6 +45,21 @@ const filter = (document.getElementById('filter') as HTMLInputElement)!
  * Carga las partidas de la página actual y renderiza la tabla junto con los controles de paginación
  */
 const showGames = () => {
+    // Si se debe mostrar solo partidas finalizadas
+    if (showFinishedOnly) {
+        // Si hay un filtro de búsqueda, combinarlo con el filtro de partidas finalizadas
+        if (currentFilter.trim()) {
+            loadFinishedGamesWithFilter(currentFilter).then(result => {
+                handleGamesResponse(result)
+            })
+        } else {
+            loadFinishedGames().then(result => {
+                handleGamesResponse(result)
+            })
+        }
+        return
+    }
+    
     // Si hay un filtro activo, usar filterGames, sino usar loadGames
     if (currentFilter.trim()) {
         filterGames(currentFilter).then(result => {
@@ -164,6 +180,7 @@ const chargeTable = (games: any[]) => {
         
         switch(status) {
             case 'waiting':
+            case 'en_espera':
                 statusText = 'Esperando'
                 statusClass = 'status-waiting'
                 break
@@ -313,6 +330,99 @@ const loadGames = async (): Promise<any> => {
     } catch (e) {
         console.error("Error al cargar las partidas:", e)
         showError('Error de conexión al cargar las partidas')
+        return { data: [], pagination: null }
+    }
+}
+
+/**
+ * Cargar partidas finalizadas con paginación
+ * @returns Promise con objeto que contiene data (array de partidas) y pagination (metadatos)
+ */
+const loadFinishedGames = async (): Promise<any> => {
+    try {
+        const response = await getFinishedGames(currentPage)
+        
+        // Verificar si la respuesta es OK
+        if (!response.ok) {
+            // Si es 401, redirigir a login
+            if (response.status === 401) {
+                window.location.href = 'login.html'
+                return { data: [], pagination: null }
+            }
+            
+            // Intentar obtener el texto de error
+            const text = await response.text()
+            console.error('Error del servidor:', response.status, text)
+            showError(`Error al cargar las partidas finalizadas (${response.status})`)
+            return { data: [], pagination: null }
+        }
+        
+        // Verificar que la respuesta sea JSON
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text()
+            console.error('Respuesta no es JSON:', text.substring(0, 200))
+            showError('Error: El servidor no devolvió JSON')
+            return { data: [], pagination: null }
+        }
+        
+        const data = await response.json()
+        
+        if (data.success && data.data) {
+            // Devolver tanto los datos como la información de paginación
+            return {
+                data: data.data,
+                pagination: data.pagination || null
+            }
+        }
+        return { data: [], pagination: null }
+    } catch (e) {
+        console.error("Error al cargar las partidas finalizadas:", e)
+        showError('Error de conexión al cargar las partidas finalizadas')
+        return { data: [], pagination: null }
+    }
+}
+
+/**
+ * Cargar partidas finalizadas con filtro de búsqueda
+ * @param name - Término de búsqueda
+ * @returns Promise con objeto que contiene data (array de partidas) y pagination (metadatos)
+ */
+const loadFinishedGamesWithFilter = async (name: string): Promise<any> => {
+    try {
+        if (!name || name.trim() === '') {
+            // Si no hay filtro, cargar solo partidas finalizadas
+            return await loadFinishedGames()
+        }
+        
+        const response = await getFinishedGames(currentPage, name.trim())
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                window.location.href = 'login.html'
+                return { data: [], pagination: null }
+            }
+            return { data: [], pagination: null }
+        }
+        
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('Respuesta no es JSON al filtrar partidas finalizadas')
+            return { data: [], pagination: null }
+        }
+        
+        const data = await response.json()
+        
+        if (data.success && data.data) {
+            // Devolver tanto los datos como la información de paginación
+            return {
+                data: data.data,
+                pagination: data.pagination || null
+            }
+        }
+        return { data: [], pagination: null }
+    } catch (e) {
+        console.error("Error al filtrar partidas finalizadas:", e)
         return { data: [], pagination: null }
     }
 }
@@ -837,6 +947,207 @@ const showError = (message: string) => {
     renderPagination(null)
 }
 
+/**
+ * Obtiene la partida activa del usuario actual usando el endpoint específico
+ * @returns Promise con la partida activa o null si no se encuentra
+ */
+const getActiveGame = async (): Promise<any | null> => {
+    try {
+        const response = await getActiveGameAPI()
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                window.location.href = 'login.html'
+                return null
+            }
+            return null
+        }
+
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+            return null
+        }
+
+        const data = await response.json()
+        
+        if (data.success && data.data) {
+            return data.data
+        }
+        
+        return null
+    } catch (error) {
+        console.error('Error al obtener la partida activa:', error)
+        return null
+    }
+}
+
+/**
+ * Renderiza la partida activa en el contenedor
+ * @param game - Datos de la partida activa
+ */
+const renderActiveGame = (game: any) => {
+    const container = document.getElementById('activeGameContainer')
+    const tableBody = document.getElementById('activeGameTableBody')
+    
+    if (!container || !tableBody) {
+        return
+    }
+
+    if (!game) {
+        container.classList.add('disabled')
+        return
+    }
+
+    // Obtener información de la partida
+    const gameName = game.name || 'Sin nombre'
+    const gameCode = game.code_join_to || 'N/A'
+    const currentPlayers = game.current_players || (game.players ? game.players.length : 0)
+    const maxPlayers = game.max_players || 0
+    const status = game.status?.name || game.status || 'Desconocido'
+    const gameId = game.id
+
+    // Formatear el estado
+    let statusText = status
+    let statusClass = 'status-waiting'
+    
+    const statusLower = status.toLowerCase()
+    switch(statusLower) {
+        case 'waiting':
+        case 'en_espera':
+            statusText = 'Esperando'
+            statusClass = 'status-waiting'
+            break
+        case 'in_progress':
+        case 'en_progreso':
+        case 'en_curso':
+            statusText = 'En Progreso'
+            statusClass = 'status-in-progress'
+            break
+        case 'finished':
+        case 'finalizada':
+            statusText = 'Finalizada'
+            statusClass = 'status-finished'
+            break
+        case 'created':
+        case 'creada':
+            statusText = 'Creada'
+            statusClass = 'status-created'
+            break
+    }
+
+    // Crear la fila de la tabla igual que en chargeTable
+    tableBody.innerHTML = ''
+    const row = document.createElement('tr')
+
+    // Columna Nombre
+    const tdName = document.createElement('td')
+    tdName.classList.add('text-center')
+    tdName.textContent = gameName
+    row.appendChild(tdName)
+
+    // Columna Código
+    const tdCode = document.createElement('td')
+    tdCode.classList.add('text-center')
+    const codeSpan = document.createElement('span')
+    codeSpan.textContent = gameCode
+    codeSpan.style.fontFamily = 'monospace'
+    codeSpan.style.fontWeight = 'bold'
+    codeSpan.style.fontSize = '0.9em'
+    codeSpan.style.letterSpacing = '1px'
+    tdCode.appendChild(codeSpan)
+    row.appendChild(tdCode)
+
+    // Columna Máximo de Jugadores
+    const tdMaxPlayers = document.createElement('td')
+    tdMaxPlayers.classList.add('text-center')
+    tdMaxPlayers.textContent = `${currentPlayers}/${maxPlayers}`
+    row.appendChild(tdMaxPlayers)
+
+    // Columna Estado
+    const tdStatus = document.createElement('td')
+    tdStatus.classList.add('text-center')
+    const statusBadge = document.createElement('span')
+    statusBadge.classList.add('status-badge', statusClass)
+    statusBadge.textContent = statusText
+    tdStatus.appendChild(statusBadge)
+    row.appendChild(tdStatus)
+
+    // Columna Acciones
+    const tdActions = document.createElement('td')
+    tdActions.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-center', 'h-100')
+
+    const div = document.createElement('div')
+    div.classList.add('actions-container', 'bg-white', 'border-none')
+    
+    const goToLobbyBtn = document.createElement('button')
+    goToLobbyBtn.classList.add('btn', 'warning')
+    goToLobbyBtn.textContent = 'Ir al Lobby'
+    goToLobbyBtn.addEventListener('click', () => {
+        window.location.href = `${routes.gameLobby}?gameId=${gameId}`
+    })
+    div.appendChild(goToLobbyBtn)
+    
+    tdActions.appendChild(div)
+    row.appendChild(tdActions)
+
+    tableBody.appendChild(row)
+
+    // Mostrar el contenedor
+    container.classList.remove('disabled')
+    
+    // Mostrar el título de "Otras Partidas"
+    const otherGamesTitle = document.getElementById('otherGamesTitle')
+    if (otherGamesTitle) {
+        otherGamesTitle.classList.remove('disabled')
+    }
+    
+    // Ocultar el botón "Crear Partida" cuando hay partida activa
+    const createGameBtn = document.getElementById('createGameBtn')
+    if (createGameBtn) {
+        createGameBtn.style.display = 'none'
+    }
+}
+
+/**
+ * Carga y muestra la partida activa del usuario
+ */
+const loadActiveGame = async () => {
+    try {
+        // Asegurar que el botón esté visible por defecto
+        const createGameBtn = document.getElementById('createGameBtn')
+        if (createGameBtn) {
+            createGameBtn.style.display = ''
+        }
+        
+        const activeGame = await getActiveGame()
+        renderActiveGame(activeGame)
+        
+        // Si no hay partida activa, ocultar el título de "Otras Partidas"
+        if (!activeGame) {
+            const otherGamesTitle = document.getElementById('otherGamesTitle')
+            if (otherGamesTitle) {
+                otherGamesTitle.classList.add('disabled')
+            }
+        }
+    } catch (error) {
+        console.error('Error al cargar la partida activa:', error)
+        const container = document.getElementById('activeGameContainer')
+        if (container) {
+            container.classList.add('disabled')
+        }
+        // Ocultar el título si hay error
+        const otherGamesTitle = document.getElementById('otherGamesTitle')
+        if (otherGamesTitle) {
+            otherGamesTitle.classList.add('disabled')
+        }
+        // Asegurar que el botón esté visible si hay error
+        const createGameBtn = document.getElementById('createGameBtn')
+        if (createGameBtn) {
+            createGameBtn.style.display = ''
+        }
+    }
+}
+
 const generateModals = () => {
     const body = document.querySelector('body')!
 
@@ -884,8 +1195,8 @@ const generateModals = () => {
                         <input type="text" id="editGameName" placeholder="Nombre de la partida" required>
                     </div>
                     <div>
-                        <label for="editGameMaxPlayers">Máximo de jugadores (4-20):</label>
-                        <input type="number" id="editGameMaxPlayers" min="4" max="20" required>
+                        <label for="editGameMaxPlayers">Máximo de jugadores (15-30):</label>
+                        <input type="number" id="editGameMaxPlayers" min="15" max="30" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -965,12 +1276,37 @@ const init = async () => {
     // Verificar si es admin
     await checkAdminStatus()
 
+    // Mostrar/ocultar checkbox de partidas finalizadas según si es admin
+    const adminFinishedGamesContainer = document.getElementById('adminFinishedGamesContainer')
+    if (adminFinishedGamesContainer) {
+        if (isAdmin) {
+            adminFinishedGamesContainer.classList.remove('disabled')
+        } else {
+            adminFinishedGamesContainer.classList.add('disabled')
+        }
+    }
+
+    // Configurar checkbox de partidas finalizadas
+    const showFinishedGamesCheckbox = document.getElementById('showFinishedGames') as HTMLInputElement
+    if (showFinishedGamesCheckbox) {
+        showFinishedGamesCheckbox.addEventListener('change', (e) => {
+            const target = e.target as HTMLInputElement
+            showFinishedOnly = target.checked
+            currentPage = 1 // Resetear a la primera página
+            currentFilter = '' // Limpiar el filtro de búsqueda
+            showGames()
+        })
+    }
+
     // Generar modales
     generateModals()
 
     // Configurar botón de crear partida
     const createGameBtn = document.getElementById('createGameBtn')
     createGameBtn?.addEventListener('click', handleCreateGame)
+
+    // Cargar y mostrar partida activa
+    loadActiveGame()
 
     // Cargar y mostrar partidas
     showGames()

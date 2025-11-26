@@ -64,6 +64,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Rutas de partidas (games)
     Route::get('/findGame', [GameController::class, 'index']);
+    Route::get('/findGame/active', [GameController::class, 'activeGame']);
     Route::get('/findGame/{id}', [GameController::class, 'show'])->whereNumber('id');
     Route::post('/findGame', [GameController::class, 'store']);
     Route::post('/findGame/{id}', [GameController::class, 'update'])->whereNumber('id');

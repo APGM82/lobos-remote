@@ -25,8 +25,11 @@ class GameFactory extends Factory
      */
     public function definition(): array
     {
-        // Obtener un usuario aleatorio como host, o crear uno si no existe
-        $user = User::inRandomOrder()->first() ?? User::factory()->create();
+        // Obtener un usuario aleatorio como host (excluyendo admin), o crear uno si no existe
+        $adminUser = User::where('nickname', 'admin')->first();
+        $user = User::where('nickname', '!=', 'admin')
+            ->inRandomOrder()
+            ->first() ?? User::factory()->create();
         
         // Obtener un estado aleatorio, o usar 'waiting' por defecto
         $status = StatusCode::inRandomOrder()->first() ?? StatusCode::factory()->waiting()->create();

@@ -27,17 +27,43 @@ class GameController extends Controller
             
             $query = Game::with(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
 
-            // Manejar partidas eliminadas según el parámetro
-            $deletedStatus = StatusCode::where('name', 'eliminada')->first();
-            $includeDeleted = $request->has('include_deleted') && $request->include_deleted === 'true' && $isAdmin;
+            // Filtro por estado si se proporciona (solo para admin)
+            // Si hay filtro por estado, aplicarlo primero y no excluir eliminadas (ya que el filtro de estado es específico)
+            $hasStatusFilter = $request->has('status') && $request->status && $isAdmin;
             
-            if ($deletedStatus) {
-                if ($includeDeleted) {
-                    // Si el admin solicita ver eliminadas, mostrar SOLO las eliminadas
-                    $query->where('code_status', '=', $deletedStatus->id);
-                } else {
-                    // Por defecto, excluir partidas eliminadas
-                    $query->where('code_status', '!=', $deletedStatus->id);
+            if ($hasStatusFilter) {
+                $statusName = $request->status;
+                $statusCode = StatusCode::where('name', $statusName)->first();
+                if ($statusCode) {
+                    // Si hay filtro por estado, mostrar SOLO ese estado (no excluir eliminadas porque el filtro es específico)
+                    $query->where('code_status', '=', $statusCode->id);
+                }
+            } else {
+                // Excluir eliminadas y finalizadas del listado principal si NO hay filtro por estado específico
+                $deletedStatus = StatusCode::where('name', 'eliminada')->first();
+                $finishedStatus = StatusCode::where('name', 'finalizada')->first();
+                $includeDeleted = $request->has('include_deleted') && $request->include_deleted === 'true' && $isAdmin;
+                
+                $statusesToExclude = [];
+                
+                if ($deletedStatus) {
+                    if ($includeDeleted) {
+                        // Si el admin solicita ver eliminadas, mostrar SOLO las eliminadas
+                        $query->where('code_status', '=', $deletedStatus->id);
+                    } else {
+                        // Por defecto, excluir partidas eliminadas
+                        $statusesToExclude[] = $deletedStatus->id;
+                    }
+                }
+                
+                // Excluir partidas finalizadas del listado principal
+                if ($finishedStatus && !$includeDeleted) {
+                    $statusesToExclude[] = $finishedStatus->id;
+                }
+                
+                // Aplicar exclusión de estados si hay alguno que excluir
+                if (!empty($statusesToExclude)) {
+                    $query->whereNotIn('code_status', $statusesToExclude);
                 }
             }
 
@@ -48,6 +74,43 @@ class GameController extends Controller
                     $q->where('name', 'like', '%' . $searchTerm . '%')
                       ->orWhere('code_join_to', 'like', '%' . $searchTerm . '%');
                 });
+            }
+
+            // Excluir la partida activa del usuario del listado principal (siempre, excepto cuando se filtra por estado finalizada)
+            // La partida activa no debería estar finalizada, así que no hay conflicto
+            if ($user) {
+                $userLobbies = GameLobby::where('id_user', $user->id)->pluck('id_game');
+                
+                if ($userLobbies->isNotEmpty()) {
+                    // Obtener estados que no se consideran "activos" (eliminadas, finalizadas)
+                    $deletedStatus = StatusCode::where('name', 'eliminada')->first();
+                    $finishedStatus = StatusCode::where('name', 'finalizada')->first();
+                    
+                    $blockedStatusIds = [];
+                    if ($finishedStatus) {
+                        $blockedStatusIds[] = $finishedStatus->id;
+                    }
+                    if ($deletedStatus) {
+                        $blockedStatusIds[] = $deletedStatus->id;
+                    }
+                    
+                    // Obtener todas las partidas activas del usuario (que no estén eliminadas o finalizadas)
+                    $activeGameIds = [];
+                    if (!empty($blockedStatusIds)) {
+                        $activeGameIds = Game::whereIn('id', $userLobbies)
+                            ->whereNotIn('code_status', $blockedStatusIds)
+                            ->pluck('id')
+                            ->toArray();
+                    } else {
+                        // Si no hay estados bloqueados, tomar todas las partidas del usuario
+                        $activeGameIds = $userLobbies->toArray();
+                    }
+                    
+                    // Excluir todas las partidas activas del listado
+                    if (!empty($activeGameIds)) {
+                        $query->whereNotIn('id', $activeGameIds);
+                    }
+                }
             }
 
             // Ordenar por fecha de creación descendente (más reciente primero)
@@ -161,6 +224,106 @@ class GameController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener la partida: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener la partida activa del usuario autenticado
+     */
+    public function activeGame(Request $request)
+    {
+        try {
+            $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no autenticado'
+                ], 401);
+            }
+
+            // Obtener todas las partidas donde el usuario participa
+            $userLobbies = GameLobby::where('id_user', $user->id)->pluck('id_game');
+            
+            if ($userLobbies->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => null,
+                    'message' => 'No hay partida activa'
+                ], 200);
+            }
+
+            // Obtener estados bloqueados (eliminadas, finalizadas)
+            $deletedStatus = StatusCode::where('name', 'eliminada')->first();
+            $finishedStatus = StatusCode::where('name', 'finalizada')->first();
+            
+            $blockedStatusIds = [];
+            if ($finishedStatus) {
+                $blockedStatusIds[] = $finishedStatus->id;
+            }
+            if ($deletedStatus) {
+                $blockedStatusIds[] = $deletedStatus->id;
+            }
+            
+            // Obtener la partida activa del usuario (que no esté eliminada o finalizada)
+            $activeGame = null;
+            if (!empty($blockedStatusIds)) {
+                $activeGame = Game::with(['userHost:id,name,nickname,email', 'status:id,code_status,name', 'users:id,name,nickname'])
+                    ->whereIn('id', $userLobbies)
+                    ->whereNotIn('code_status', $blockedStatusIds)
+                    ->first();
+            } else {
+                $activeGame = Game::with(['userHost:id,name,nickname,email', 'status:id,code_status,name', 'users:id,name,nickname'])
+                    ->whereIn('id', $userLobbies)
+                    ->first();
+            }
+
+            if (!$activeGame) {
+                return response()->json([
+                    'success' => true,
+                    'data' => null,
+                    'message' => 'No hay partida activa'
+                ], 200);
+            }
+
+            $data = [
+                'id' => $activeGame->id,
+                'name' => $activeGame->name,
+                'max_players' => $activeGame->max_players,
+                'current_players' => $activeGame->users->count(),
+                'status' => [
+                    'id' => $activeGame->status->id ?? null,
+                    'code' => $activeGame->status->code_status ?? null,
+                    'name' => $activeGame->status->name ?? 'unknown',
+                ],
+                'code_join_to' => $activeGame->code_join_to,
+                'host' => [
+                    'id' => $activeGame->userHost->id ?? null,
+                    'name' => $activeGame->userHost->name ?? null,
+                    'nickname' => $activeGame->userHost->nickname ?? null,
+                    'email' => $activeGame->userHost->email ?? null,
+                ],
+                'players' => $activeGame->users->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'nickname' => $user->nickname,
+                    ];
+                }),
+                'created_at' => $activeGame->created_at,
+                'updated_at' => $activeGame->updated_at,
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'message' => 'Partida activa obtenida correctamente'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener la partida activa: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -27,10 +27,33 @@ const getGames = async (page: number = 1) => {
     }
 }
 
-const getFilterGames = async (name: string, page: number = 1) => {
+const getFilterGames = async (name: string, page: number = 1, status?: string) => {
     try {
         const token = getAuthToken()
-        return await fetch(`${apiUrl}?name=${encodeURIComponent(name)}&page=${page}`, {
+        let url = `${apiUrl}?name=${encodeURIComponent(name)}&page=${page}`
+        if (status) {
+            url += `&status=${encodeURIComponent(status)}`
+        }
+        return await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+    } catch (error) {
+        throw error
+    }
+}
+
+const getFinishedGames = async (page: number = 1, name?: string) => {
+    try {
+        const token = getAuthToken()
+        let url = `${apiUrl}?status=finalizada&page=${page}`
+        if (name && name.trim()) {
+            url += `&name=${encodeURIComponent(name.trim())}`
+        }
+        return await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -124,13 +147,31 @@ const deleteGame = async (id: number) => {
     }
 }
 
+const getActiveGame = async () => {
+    try {
+        const token = getAuthToken()
+        return await fetch(`${apiUrl}/active`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+    } catch (error) {
+        console.log(error)
+        throw error
+    }
+}
+
 export {
     getGames,
     getFilterGames,
+    getFinishedGames,
     createGame,
     joinGame,
     viewGame,
     updateGame,
-    deleteGame
+    deleteGame,
+    getActiveGame
 }
 
