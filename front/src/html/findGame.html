@@ -21,14 +21,41 @@
             <div class="title">
                 <h1>Buscar Partidas</h1>
             </div>
-            <div class="d-flex w-75 filter-container">
-                <div class="filter">
+            <div class="search-game-container">
+                <div class="search-game-filter">
                     <label for="filter">Buscar partida:</label>
-                    <input type="text" id="filter" placeholder="Nombre de la partida" class="w-60">
+                    <input type="text" id="filter" placeholder="Nombre de la partida" class="search-game-input">
                 </div>
-                <div class="w-25">
-                    <button id="createGameBtn" class="btn success">Crear Partida</button>
+                <div id="adminFinishedGamesContainer" class="admin-finished-games-container disabled">
+                    <label for="showFinishedGames">
+                        <input type="checkbox" id="showFinishedGames">
+                        Ver partidas finalizadas
+                    </label>
                 </div>
+                <button id="createGameBtn" class="btn success">Crear Partida</button>
+            </div>
+            <!-- Contenedor para la partida activa -->
+            <div id="activeGameContainer" class="active-game-container disabled">
+                <h2>Partida Activa</h2>
+                <div id="activeGameTableContainer" class="active-game-table-container">
+                    <table id="activeGameTable">
+                        <thead>
+                            <tr>
+                                <th class="w-25">Nombre</th>
+                                <th class="w-15">Código</th>
+                                <th class="w-15">Numero de jugadores</th>
+                                <th class="w-15">Estado</th>
+                                <th class="w-30">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeGameTableBody">
+                            <!-- El contenido se cargará dinámicamente aquí -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="otherGamesTitle" class="other-games-title disabled">
+                <h2>Otras Partidas</h2>
             </div>
             <div id="tableContainer">
                 <div id="gamesError" class="error-message disabled">

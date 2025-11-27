@@ -25,6 +25,12 @@ class GameSeeder extends Seeder
             $users = User::factory(10)->create();
         }
 
+        // Excluir al usuario admin de las partidas
+        $adminUser = User::where('nickname', 'admin')->first();
+        $usersWithoutAdmin = $users->reject(function ($user) use ($adminUser) {
+            return $adminUser && $user->id === $adminUser->id;
+        });
+
         // Asegurarse de que existan estados
         $statuses = StatusCode::all();
         if ($statuses->isEmpty()) {
@@ -42,11 +48,11 @@ class GameSeeder extends Seeder
             ]);
         }
 
-        // Obtener estados específicos
-        $statusCreated = StatusCode::where('name', 'created')->first();
-        $statusWaiting = StatusCode::where('name', 'waiting')->first();
-        $statusInProgress = StatusCode::where('name', 'in_progress')->first();
-        $statusFinished = StatusCode::where('name', 'finished')->first();
+        // Obtener estados específicos (en español)
+        $statusCreated = StatusCode::where('name', 'creada')->first();
+        $statusWaiting = StatusCode::where('name', 'en_espera')->first();
+        $statusInProgress = StatusCode::where('name', 'en_progreso')->first();
+        $statusFinished = StatusCode::where('name', 'finalizada')->first();
 
         // Crear partidas de ejemplo
         $games = [
@@ -129,9 +135,15 @@ class GameSeeder extends Seeder
 
         foreach ($games as $gameData) {
             // Usar transacción para asegurar que la partida siempre tenga al menos un jugador
-            DB::transaction(function () use ($gameData, $users, $defaultCharacter) {
-                // Seleccionar un usuario aleatorio como host
-                $host = $users->random();
+            DB::transaction(function () use ($gameData, $usersWithoutAdmin, $defaultCharacter) {
+                // Verificar que haya usuarios disponibles (sin admin)
+                if ($usersWithoutAdmin->isEmpty()) {
+                    $this->command->warn('No hay usuarios disponibles (sin admin) para crear partidas.');
+                    return;
+                }
+
+                // Seleccionar un usuario aleatorio como host (excluyendo admin)
+                $host = $usersWithoutAdmin->random();
 
                 // Generar código único
                 $codeJoinTo = strtoupper(Str::random(6));
@@ -148,15 +160,15 @@ class GameSeeder extends Seeder
                     'code_status' => $gameData['status']->id,
                 ]);
 
-                // Agregar jugadores a la partida
-                $playersToAdd = min($gameData['players_count'], $users->count());
+                // Agregar jugadores a la partida (excluyendo admin)
+                $playersToAdd = min($gameData['players_count'], $usersWithoutAdmin->count());
                 
                 // Asegurar que siempre haya al menos 1 jugador (el host)
                 if ($playersToAdd < 1) {
                     $playersToAdd = 1;
                 }
 
-                $selectedPlayers = $users->random(min($playersToAdd, $users->count()));
+                $selectedPlayers = $usersWithoutAdmin->random(min($playersToAdd, $usersWithoutAdmin->count()));
 
                 // Asegurar que el host esté siempre incluido
                 if (!$selectedPlayers->contains('id', $host->id)) {
@@ -180,6 +192,7 @@ class GameSeeder extends Seeder
                             'id_game' => $game->id,
                             'id_user' => $player->id,
                             'id_character' => $defaultCharacter->id,
+                            'is_alive' => true,
                         ]);
                     }
                 }
@@ -192,6 +205,7 @@ class GameSeeder extends Seeder
                         'id_game' => $game->id,
                         'id_user' => $host->id,
                         'id_character' => $defaultCharacter->id,
+                        'is_alive' => true,
                     ]);
                     $finalPlayerCount = 1;
                 }

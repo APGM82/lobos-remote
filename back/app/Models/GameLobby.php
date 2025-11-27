@@ -14,7 +14,8 @@ class GameLobby extends Model
     protected $fillable = [
         'id_game',
         'id_user',
-        'id_character'
+        'id_character',
+        'is_alive'
     ];
 
     public function character() : HasMany {

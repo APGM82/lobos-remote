@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Role;
+use App\Models\Game;
+use App\Models\GameLobby;
+use App\Models\StatusCode;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -127,12 +131,95 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $user = $request->user();
+        
+        // Eliminar al usuario de partidas en estado "esperando" o "creada"
+        $this->removeUserFromWaitingGames($user);
+        
         $tokensDeleted = $user->tokens()->delete();
 
         return response()->json([
             "success" => true,
             "message" => "Tokens revocados: " . $tokensDeleted
         ]);
+    }
+
+    /**
+     * Elimina al usuario de todas las partidas en estado "esperando" o "creada"
+     * Si una partida queda sin jugadores, se elimina automáticamente
+     */
+    private function removeUserFromWaitingGames($user)
+    {
+        try {
+            // Obtener estados que permiten eliminar al usuario (esperando, creada)
+            $waitingStatuses = StatusCode::whereIn('name', ['en_espera', 'creada'])
+                ->pluck('id')
+                ->toArray();
+
+            if (empty($waitingStatuses)) {
+                return;
+            }
+
+            // Obtener todas las partidas en las que el usuario está unido y que están en estado esperando/creada
+            $userLobbyGameIds = GameLobby::where('id_user', $user->id)
+                ->pluck('id_game')
+                ->toArray();
+
+            if (empty($userLobbyGameIds)) {
+                return;
+            }
+
+            // Obtener las partidas que están en estado esperando/creada
+            $gamesToProcess = Game::whereIn('id', $userLobbyGameIds)
+                ->whereIn('code_status', $waitingStatuses)
+                ->pluck('id')
+                ->toArray();
+
+            if (empty($gamesToProcess)) {
+                return;
+            }
+
+            // Usar transacción para asegurar consistencia
+            DB::transaction(function () use ($user, $gamesToProcess) {
+                // Eliminar al usuario de todas las partidas en estado esperando/creada
+                foreach ($gamesToProcess as $gameId) {
+                    GameLobby::where('id_game', $gameId)
+                        ->where('id_user', $user->id)
+                        ->delete();
+
+                    // Verificar si la partida queda sin jugadores
+                    $remainingPlayers = GameLobby::where('id_game', $gameId)->count();
+
+                    if ($remainingPlayers === 0) {
+                        // Obtener el estado "deleted" o crearlo si no existe
+                        $deletedStatus = StatusCode::where('name', 'eliminada')->first();
+                        if (!$deletedStatus) {
+                            $deletedStatus = StatusCode::create([
+                                'code_status' => 'DELETED',
+                                'name' => 'deleted',
+                            ]);
+                        }
+
+                        // Soft delete: cambiar el estado a "deleted"
+                        Game::where('id', $gameId)->update([
+                            'code_status' => $deletedStatus->id
+                        ]);
+                    } else {
+                        // Si era el host y quedan jugadores, transferir el host al primer jugador restante
+                        $game = Game::find($gameId);
+                        if ($game && $game->id_user_host === $user->id) {
+                            $newHost = GameLobby::where('id_game', $gameId)->first();
+                            if ($newHost) {
+                                $game->id_user_host = $newHost->id_user;
+                                $game->save();
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (\Exception $e) {
+            // Log del error pero no fallar el logout
+            \Log::error('Error al eliminar usuario de partidas en logout: ' . $e->getMessage());
+        }
     }
 
     // Función para asignar abilities según roles
