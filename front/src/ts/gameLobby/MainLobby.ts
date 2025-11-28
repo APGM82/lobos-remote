@@ -1,5 +1,6 @@
 import { getGameInfo, leaveGame, startGame, updateGameDetails } from './CrudLobby.ts'
 import { requireAuth, getUser, getToken } from '../auth.ts'
+import {getUserById} from '../adminUser/CrudUser.ts'
 import routes from '../routes.ts'
 
 let gameData: any = null
@@ -93,7 +94,7 @@ const loadGameInfo = async (gameId: number) => {
         if (data.success && data.data) {
             gameData = data.data
             updateLobbyInfo()
-            renderCards()
+            await renderCards()
         } else {
             alert(data.message || 'Error al cargar la partida')
         }
@@ -422,7 +423,7 @@ const bindEditButton = (gameId: number) => {
                 }
                 closeModal()
                 updateLobbyInfo()
-                renderCards()
+                await renderCards()
                 alert(data.message || 'Partida actualizada correctamente')
             } else {
                 alert(data.message || 'Error al actualizar la partida')
@@ -501,7 +502,7 @@ const bindStartButton = (gameId: number) => {
                 }
 
                 updateLobbyInfo()
-                renderCards()
+                await renderCards()
                 alert(data.message || 'La partida ha comenzado')
             } else {
                 alert(data.message || 'Error al iniciar la partida')
@@ -586,7 +587,7 @@ const bindAbandonButton = (gameId: number) => {
 /**
  * Renderiza las cartas de votación dinámicamente
  */
-const renderCards = () => {
+const renderCards = async () => {
     const cardsContainer = document.getElementById('cardsContainer')
     if (!cardsContainer || !gameData) return
 
@@ -611,16 +612,35 @@ const renderCards = () => {
     })
 
     // Renderizar cartas hasta max_players
-    for (let i = 0; i < maxPlayers; i++) {
-        const player = playersByPosition[i]
-        const isEnabled = !!player
+     for(let i = 0; i < maxPlayers; i++) {
+         const player = playersByPosition[i]
+         let playerData
+         const isEnabled = !!player
 
-        const cardWrapper = document.createElement('div')
-        cardWrapper.classList.add('card-wrapper')
+         if(isEnabled) {
+             try {
+                 const response = await getUserById(Number(player.id));
 
-        const cardDiamond = document.createElement('div')
-        cardDiamond.classList.add('card-diamond')
-        if (!isEnabled) {
+                 if (!response.ok) {
+                     if (response.status === 401) {
+                         window.location.href = 'login.html'
+                     }
+                     playerData = []
+                 }
+
+                 playerData = await response.json();
+             } catch (e) {
+                 playerData = []
+                 console.error('Error al cargar los usuarios de la partida: ' + e)
+             }
+         }
+
+         const cardWrapper = document.createElement('div')
+         cardWrapper.classList.add('card-wrapper')
+
+         const cardDiamond = document.createElement('div')
+         cardDiamond.classList.add('card-diamond')
+         if(!isEnabled) {
             cardDiamond.classList.add('disabled')
         }
 
@@ -630,15 +650,22 @@ const renderCards = () => {
         // Imagen del logo (siempre visible)
         const cardImage = document.createElement('img')
         cardImage.classList.add('card-image')
-        cardImage.src = '../public/logo.png'
-        cardImage.alt = isEnabled && player ? player.nickname : 'Jugador no asignado'
+        console.table(playerData)
+        if(isEnabled) {
+            if (!playerData && playerData.length != 0 ) {
+                cardImage.src = playerData.data.image
+            } else {
+                cardImage.src = "https://res.cloudinary.com/dkwl53odf/image/upload/v1763383386/profile_jkjkq7.png"
+            }
+        }
+        cardImage.alt = isEnabled && player ? playerData.data.nickname : 'Jugador no asignado'
         cardContent.appendChild(cardImage)
 
         // Nickname del usuario (solo si está habilitado)
-        if (isEnabled && player && player.nickname) {
+        if (isEnabled && player && playerData.data.nickname) {
             const cardNickname = document.createElement('div')
             cardNickname.classList.add('card-nickname')
-            cardNickname.textContent = player.nickname
+            cardNickname.textContent = playerData.data.nickname
             cardContent.appendChild(cardNickname)
         } else {
             // Mostrar etiqueta uX si no hay jugador
