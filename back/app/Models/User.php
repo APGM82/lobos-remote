@@ -60,5 +60,10 @@ class User extends Authenticatable
         return $this->belongsToMany(Game::class, 'game_lobbies', 'id_user', 'id_game');
     }
 
-
+    public function characterInGame()
+    {
+        return $this->belongsToMany(GameCharacter::class, 'game_lobbies', 'id_user', 'id_character')
+            ->withPivot('id_game')
+            ->withTimestamps();
+    }
 }

@@ -24,13 +24,13 @@ class GameController extends Controller
         try {
             $user = $request->user();
             $isAdmin = $user && $user->tokenCan('admin');
-            
+
             $query = Game::with(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
 
             // Filtro por estado si se proporciona (solo para admin)
             // Si hay filtro por estado, aplicarlo primero y no excluir eliminadas (ya que el filtro de estado es específico)
             $hasStatusFilter = $request->has('status') && $request->status && $isAdmin;
-            
+
             if ($hasStatusFilter) {
                 $statusName = $request->status;
                 $statusCode = StatusCode::where('name', $statusName)->first();
@@ -43,9 +43,9 @@ class GameController extends Controller
                 $deletedStatus = StatusCode::where('name', 'eliminada')->first();
                 $finishedStatus = StatusCode::where('name', 'finalizada')->first();
                 $includeDeleted = $request->has('include_deleted') && $request->include_deleted === 'true' && $isAdmin;
-                
+
                 $statusesToExclude = [];
-                
+
                 if ($deletedStatus) {
                     if ($includeDeleted) {
                         // Si el admin solicita ver eliminadas, mostrar SOLO las eliminadas
@@ -55,12 +55,12 @@ class GameController extends Controller
                         $statusesToExclude[] = $deletedStatus->id;
                     }
                 }
-                
+
                 // Excluir partidas finalizadas del listado principal
                 if ($finishedStatus && !$includeDeleted) {
                     $statusesToExclude[] = $finishedStatus->id;
                 }
-                
+
                 // Aplicar exclusión de estados si hay alguno que excluir
                 if (!empty($statusesToExclude)) {
                     $query->whereNotIn('code_status', $statusesToExclude);
@@ -80,12 +80,12 @@ class GameController extends Controller
             // La partida activa no debería estar finalizada, así que no hay conflicto
             if ($user) {
                 $userLobbies = GameLobby::where('id_user', $user->id)->pluck('id_game');
-                
+
                 if ($userLobbies->isNotEmpty()) {
                     // Obtener estados que no se consideran "activos" (eliminadas, finalizadas)
                     $deletedStatus = StatusCode::where('name', 'eliminada')->first();
                     $finishedStatus = StatusCode::where('name', 'finalizada')->first();
-                    
+
                     $blockedStatusIds = [];
                     if ($finishedStatus) {
                         $blockedStatusIds[] = $finishedStatus->id;
@@ -93,7 +93,7 @@ class GameController extends Controller
                     if ($deletedStatus) {
                         $blockedStatusIds[] = $deletedStatus->id;
                     }
-                    
+
                     // Obtener todas las partidas activas del usuario (que no estén eliminadas o finalizadas)
                     $activeGameIds = [];
                     if (!empty($blockedStatusIds)) {
@@ -105,7 +105,7 @@ class GameController extends Controller
                         // Si no hay estados bloqueados, tomar todas las partidas del usuario
                         $activeGameIds = $userLobbies->toArray();
                     }
-                    
+
                     // Excluir todas las partidas activas del listado
                     if (!empty($activeGameIds)) {
                         $query->whereNotIn('id', $activeGameIds);
@@ -209,6 +209,7 @@ class GameController extends Controller
                         'id' => $user->id,
                         'name' => $user->name,
                         'nickname' => $user->nickname,
+                        'character' => $user->pivot->id_character,
                     ];
                 }),
                 'created_at' => $game->created_at,
@@ -235,7 +236,7 @@ class GameController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             if (!$user) {
                 return response()->json([
                     'success' => false,
@@ -245,7 +246,7 @@ class GameController extends Controller
 
             // Obtener todas las partidas donde el usuario participa
             $userLobbies = GameLobby::where('id_user', $user->id)->pluck('id_game');
-            
+
             if ($userLobbies->isEmpty()) {
                 return response()->json([
                     'success' => true,
@@ -257,7 +258,7 @@ class GameController extends Controller
             // Obtener estados bloqueados (eliminadas, finalizadas)
             $deletedStatus = StatusCode::where('name', 'eliminada')->first();
             $finishedStatus = StatusCode::where('name', 'finalizada')->first();
-            
+
             $blockedStatusIds = [];
             if ($finishedStatus) {
                 $blockedStatusIds[] = $finishedStatus->id;
@@ -265,7 +266,7 @@ class GameController extends Controller
             if ($deletedStatus) {
                 $blockedStatusIds[] = $deletedStatus->id;
             }
-            
+
             // Obtener la partida activa del usuario (que no esté eliminada o finalizada)
             $activeGame = null;
             if (!empty($blockedStatusIds)) {
@@ -385,12 +386,12 @@ class GameController extends Controller
 
             // Obtener el estado "en_espera" para nuevas partidas
             $status = StatusCode::where('name', 'en_espera')->first();
-            
+
             // Si no existe "en_espera", intentar con "creada" como fallback
             if (!$status) {
                 $status = StatusCode::where('name', 'creada')->first();
             }
-            
+
             // Si tampoco existe "created", usar el primero disponible o el id 1
             if (!$status) {
                 $status = StatusCode::where('id', 1)->first();
@@ -442,7 +443,7 @@ class GameController extends Controller
                     'id_character' => $defaultCharacter->id,
                     'is_alive' => true,
                 ]);
-                
+
                 return $game;
             });
 
@@ -617,7 +618,7 @@ class GameController extends Controller
             // Verificar permisos: admin puede eliminar cualquier partida, user solo si es host
             $isAdmin = $user->tokenCan('admin');
             $isHost = $game->id_user_host === $user->id;
-            
+
             if (!$isAdmin && !$isHost) {
                 return response()->json([
                     'success' => false,
@@ -700,25 +701,25 @@ class GameController extends Controller
 
             // Verificar que el usuario no esté en otra partida activa
             $userLobbies = GameLobby::where('id_user', $user->id)->pluck('id_game');
-            
+
             if ($userLobbies->isNotEmpty()) {
                 // Obtener estados bloqueados (eliminadas, finalizadas)
                 // $deletedStatus ya está definido arriba
                 $finishedStatuses = StatusCode::whereIn('name', ['finalizada'])
                     ->pluck('id')
                     ->toArray();
-                
+
                 $blockedStatusIds = $finishedStatuses;
                 if ($deletedStatus) {
                     $blockedStatusIds[] = $deletedStatus->id;
                 }
-                
+
                 // Verificar si el usuario está en alguna partida que NO esté eliminada o finalizada
                 $activeGame = Game::whereIn('id', $userLobbies)
                     ->whereNotIn('code_status', $blockedStatusIds)
                     ->with(['status:id,code_status,name'])
                     ->first();
-                
+
                 if ($activeGame) {
                     return response()->json([
                         'success' => false,
