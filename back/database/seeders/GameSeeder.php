@@ -44,7 +44,7 @@ class GameSeeder extends Seeder
         if (!$defaultCharacter) {
             $this->command->warn('No hay personajes en la base de datos. Creando personaje por defecto...');
             $defaultCharacter = Character::create([
-                'name' => 'Aldeano'
+                'name' => 'Ninguno'
             ]);
         }
 
@@ -105,15 +105,15 @@ class GameSeeder extends Seeder
             // Partidas en progreso (llenas)
             [
                 'name' => 'La Aldea Secreta',
-                'max_players' => 10,
-                'status' => $statusInProgress,
-                'players_count' => 10,
+                'max_players' => 15,
+                'status' => $statusCreated,
+                'players_count' => 15,
             ],
             [
                 'name' => 'Batalla Final',
-                'max_players' => 8,
-                'status' => $statusInProgress,
-                'players_count' => 8,
+                'max_players' => 20,
+                'status' => $statusCreated,
+                'players_count' => 19,
             ],
 
             // Partidas finalizadas
@@ -160,9 +160,9 @@ class GameSeeder extends Seeder
                     'code_status' => $gameData['status']->id,
                 ]);
 
-                // Agregar jugadores a la partida (excluyendo admin)
-                $playersToAdd = min($gameData['players_count'], $usersWithoutAdmin->count());
-                
+                // Agregar jugadores a la partida
+                $playersToAdd = min($gameData['players_count'], $users->count());
+
                 // Asegurar que siempre haya al menos 1 jugador (el host)
                 if ($playersToAdd < 1) {
                     $playersToAdd = 1;

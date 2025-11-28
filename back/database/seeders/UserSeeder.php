@@ -43,11 +43,11 @@ class UserSeeder extends Seeder
 
         // Crear 9 usuarios adicionales solo si no existen suficientes
         $existingUsersCount = User::where('nickname', '!=', 'admin')->count();
-        $usersToCreate = max(0, 9 - $existingUsersCount);
-        
+        $usersToCreate = max(0, 29 - $existingUsersCount);
+
         if ($usersToCreate > 0) {
             $newUsers = User::factory()->count($usersToCreate)->create();
-            
+
             // Asignar rol 'user' a los nuevos usuarios
             if ($userRole) {
                 foreach ($newUsers as $user) {
@@ -64,7 +64,7 @@ class UserSeeder extends Seeder
             $usersWithoutRoles = User::where('nickname', '!=', 'admin')
                 ->doesntHave('roles')
                 ->get();
-            
+
             foreach ($usersWithoutRoles as $user) {
                 $user->roles()->attach($userRole->id);
             }

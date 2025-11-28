@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\CharacterController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\GameController;
@@ -72,6 +73,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/findGame/{id}/join', [GameController::class, 'join'])->whereNumber('id');
     Route::post('/findGame/{id}/leave', [GameController::class, 'leave'])->whereNumber('id');
     Route::post('/findGame/{id}/start', [GameController::class, 'start'])->whereNumber('id');
+
+    Route::group(['prefix' => 'game'], function () {
+        Route::post('assignCharacters/{idGame}', [CharacterController::class, 'assignCharactersToUser']);
+    });
 
     // Rutas de usuarios (requiere autenticación)
     Route::middleware(['user'])->group(function () {
