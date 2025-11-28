@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Lobby de Partida - Lobos de Castronegro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/gameLobby.css">
+</head>
+<body>
+    <header class="header" id="header">
+        <div class="left-group">
+            <a href="home.html">
+                <img src="../public/logo.png" alt="Logo" class="icon-left" />
+                <span class="title">Lobos de Castronegro</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="lobby-main">
+        <div class="lobby-container">
+            <!-- Área de Lobby (Izquierda) -->
+            <div class="lobby-area">
+                <h1 id="lobbyTitle" class="lobby-title">Cargando...</h1>
+                <p id="lobbyInstruction" class="lobby-instruction">Cargando...</p>
+                <div id="cardsContainer" class="cards-grid">
+                    <!-- Las cartas se generarán dinámicamente aquí -->
+                </div>
+            </div>
+
+            <!-- Área de Chat (Derecha) -->
+            <div class="chat-area">
+                <div class="chat-header">
+                    <h2 class="chat-title">Chat del pueblo</h2>
+                    <span class="chat-status-indicator"></span>
+                </div>
+                <div id="chatMessages" class="chat-messages">
+                    <!-- Mensajes de ejemplo estáticos -->
+                    <div class="chat-message">user1: el lobo ha sido user2</div>
+                    <div class="chat-message">user2: el lobo ha sido user3</div>
+                    <div class="chat-message">user3: el lobo ha sido user4</div>
+                    <div class="chat-message">user1: el lobo ha sido user2</div>
+                    <div class="chat-message">user2: el lobo ha sido user3</div>
+                    <div class="chat-message">user3: el lobo ha sido user4</div>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="escribe aquí tu acusación....">
+                    <button id="sendMessageBtn" class="btn chat-send-btn">Mandar mensaje</button>
+                </div>
+                <button id="editGameBtn" class="btn warning edit-btn" style="display: none;">Editar partida</button>
+                <button id="startGameBtn" class="btn success start-btn" style="display: none;">Empezar partida</button>
+                <button id="abandonBtn" class="btn abandon-btn">Abandonar</button>
+            </div>
+        </div>
+    </main>
+
+    <div id="editGameModal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Editar partida</h3>
+            </div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label for="editGameNameLobby">Nombre de la partida</label>
+                    <input type="text" id="editGameNameLobby" maxlength="255" placeholder="Nombre de la partida">
+                </div>
+                <div class="modal-field">
+                    <label for="editGameMaxPlayersLobby">Número máximo de jugadores (15-30)</label>
+                    <input type="number" id="editGameMaxPlayersLobby" min="15" max="30" step="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelEditGameBtn" class="btn danger">Cancelar</button>
+                <button id="confirmEditGameBtn" class="btn success">Guardar cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div>
+            <div>
+                <p> Copyright © 2025 · Los Hombres Lobo de Castronegro</p>
+            </div>
+            <div class="contenedor">
+                Contacto: los4mosqueperros@gmail.com
+            </div>
+            <div class="contenedor">
+                <div class="contenedor-redes">
+                    <a href="https://www.facebook.com/?locale=es_ES">
+                        <img src="https://img.icons8.com/?size=100&id=87311&format=png&color=CDD6D0" alt="Facebook" class="redes">
+                    </a>
+                </div>
+                <div class="contenedor-redes">
+                    <a href="https://www.instagram.com/?hl=es">
+                        <img src="https://img.icons8.com/?size=100&id=TRVfmt9zm5vL&format=png&color=CDD6D0" alt="Instagram" class="redes">
+                    </a>
+                </div>
+                <div class="contenedor-redes">
+                    <a href="https://x.com/?lang=es">
+                        <img src="https://img.icons8.com/?size=100&id=fJp7hepMryiw&format=png&color=CDD6D0" alt="Twitter" class="redes">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../main.ts" type="module"></script>
+    <script src="../ts/gameLobby/MainLobby.ts" type="module"></script>
+</body>
+</html>
+

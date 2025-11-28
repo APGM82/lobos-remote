@@ -25,8 +25,11 @@ class GameFactory extends Factory
      */
     public function definition(): array
     {
-        // Obtener un usuario aleatorio como host, o crear uno si no existe
-        $user = User::inRandomOrder()->first() ?? User::factory()->create();
+        // Obtener un usuario aleatorio como host (excluyendo admin), o crear uno si no existe
+        $adminUser = User::where('nickname', 'admin')->first();
+        $user = User::where('nickname', '!=', 'admin')
+            ->inRandomOrder()
+            ->first() ?? User::factory()->create();
         
         // Obtener un estado aleatorio, o usar 'waiting' por defecto
         $status = StatusCode::inRandomOrder()->first() ?? StatusCode::factory()->waiting()->create();
@@ -64,7 +67,7 @@ class GameFactory extends Factory
     public function created(): static
     {
         return $this->state(function (array $attributes) {
-            $status = StatusCode::where('name', 'created')->first() 
+            $status = StatusCode::where('name', 'creada')->first() 
                 ?? StatusCode::factory()->created()->create();
             
             return [
@@ -79,7 +82,7 @@ class GameFactory extends Factory
     public function waiting(): static
     {
         return $this->state(function (array $attributes) {
-            $status = StatusCode::where('name', 'waiting')->first() 
+            $status = StatusCode::where('name', 'en_espera')->first() 
                 ?? StatusCode::factory()->waiting()->create();
             
             return [
@@ -94,7 +97,7 @@ class GameFactory extends Factory
     public function inProgress(): static
     {
         return $this->state(function (array $attributes) {
-            $status = StatusCode::where('name', 'in_progress')->first() 
+            $status = StatusCode::where('name', 'en_progreso')->first() 
                 ?? StatusCode::factory()->inProgress()->create();
             
             return [
@@ -109,7 +112,7 @@ class GameFactory extends Factory
     public function finished(): static
     {
         return $this->state(function (array $attributes) {
-            $status = StatusCode::where('name', 'finished')->first() 
+            $status = StatusCode::where('name', 'finalizada')->first() 
                 ?? StatusCode::factory()->finished()->create();
             
             return [

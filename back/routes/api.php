@@ -65,12 +65,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Rutas de partidas (games)
     Route::get('/findGame', [GameController::class, 'index']);
+    Route::get('/findGame/active', [GameController::class, 'activeGame']);
     Route::get('/findGame/{id}', [GameController::class, 'show'])->whereNumber('id');
     Route::post('/findGame', [GameController::class, 'store']);
     Route::post('/findGame/{id}', [GameController::class, 'update'])->whereNumber('id');
     Route::delete('/findGame/{id}', [GameController::class, 'destroy'])->whereNumber('id');
     Route::post('/findGame/{id}/join', [GameController::class, 'join'])->whereNumber('id');
     Route::post('/findGame/{id}/leave', [GameController::class, 'leave'])->whereNumber('id');
+    Route::post('/findGame/{id}/start', [GameController::class, 'start'])->whereNumber('id');
 
     Route::group(['prefix' => 'game'], function () {
         Route::post('assignCharacters/{idGame}', [CharacterController::class, 'assignCharactersToUser']);

@@ -15,12 +15,18 @@ main div {
     width: 95%;
     position: relative;
     min-height: 200px;
+    margin: 0 auto;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 table {
     border-collapse: collapse;
     border: 1px solid #ddd;
     width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 table.disabled {
@@ -34,6 +40,7 @@ table th {
     color: #CDD6D0;
     border-collapse: collapse;
     border: 2px solid #000000;
+    box-sizing: border-box;
 }
 
 td {
@@ -41,6 +48,8 @@ td {
     border: 2px solid #000000;
     background-color: #FFFFFF;
     padding: 10px;
+    text-align: center;
+    box-sizing: border-box;
 }
 
 .title {
@@ -49,26 +58,165 @@ td {
     margin-bottom: 10px;
 }
 
-.filter {
-    display: block;
-    margin-bottom: 10px;
-    width: 75%;
-    padding: 5px;
+/* Estilos para el título de otras partidas */
+.other-games-title {
+    width: 95%;
+    margin: 20px auto 15px auto;
+    padding: 0;
+    text-align: center;
+    box-sizing: border-box;
 }
 
-.filter-container {
+.other-games-title.disabled {
+    display: none;
+}
+
+.other-games-title h2 {
+    margin: 0;
+    color: #000000;
+    font-size: 1.8em;
+    font-weight: bold;
+}
+
+/* Estilos para el contenedor de partida activa */
+.active-game-container {
+    width: 95%;
+    margin: 0 auto 20px auto;
+    padding: 0;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    box-sizing: border-box;
+}
+
+.active-game-container.disabled {
+    display: none;
+}
+
+.active-game-container h2 {
+    margin: 0 0 15px 0;
+    color: #000000;
+    text-align: center;
+    font-size: 1.8em;
+    font-weight: bold;
+}
+
+.active-game-table-container {
+    width: 100%;
+    position: relative;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+#activeGameTable {
+    border-collapse: collapse;
+    border: 1px solid #ddd;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+#activeGameTable th {
+    padding: 8px;
+    text-align: center;
+    background-color: #AA4465;
+    color: #CDD6D0;
+    border-collapse: collapse;
+    border: 2px solid #000000;
+    box-sizing: border-box;
+}
+
+#activeGameTable td {
+    border-collapse: collapse;
+    border: 2px solid #000000;
+    background-color: #FFFFFF;
+    padding: 10px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* Estilos para el contenedor de búsqueda de partidas */
+.search-game-container {
     display: flex;
-    flex-wrap: nowrap;
     flex-direction: row;
-    align-items: flex-end;
-    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 15px;
+    width: 95%;
+    margin: 0 auto 20px auto;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-.filter label {
-    display: block;
-    margin-bottom: 5px;
+.search-game-filter {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+.search-game-filter label {
+    margin: 0;
+    padding: 0;
     font-weight: bold;
     color: #1B2A4A;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+}
+
+.search-game-input {
+    width: 300px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+#createGameBtn {
+    margin: 0;
+    padding: 8px 16px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    height: auto;
+    align-self: center;
+}
+
+/* Estilos para el checkbox de partidas finalizadas (solo admin) */
+.admin-finished-games-container {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.admin-finished-games-container.disabled {
+    display: none;
+}
+
+.admin-finished-games-container label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    color: #1B2A4A;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.admin-finished-games-container input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
 }
 
 .actions-container {
@@ -96,6 +244,10 @@ td {
 .status-waiting {
     background-color: #fdcf1b;
     color: #000000;
+    padding: 6px 15px;
+    border-radius: 6px;
+    font-weight: bold;
+    display: inline-block;
 }
 
 .status-in-progress {
