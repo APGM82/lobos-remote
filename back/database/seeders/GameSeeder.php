@@ -161,7 +161,7 @@ class GameSeeder extends Seeder
                 ]);
 
                 // Agregar jugadores a la partida
-                $playersToAdd = min($gameData['players_count'], $users->count());
+                $playersToAdd = min($gameData['players_count'], $usersWithoutAdmin->count());
 
                 // Asegurar que siempre haya al menos 1 jugador (el host)
                 if ($playersToAdd < 1) {

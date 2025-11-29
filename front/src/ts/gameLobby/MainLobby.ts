@@ -3,7 +3,6 @@ import { requireAuth, getUser, getToken } from '../auth.ts'
 import routes from '../routes.ts'
 
 let gameData: any = null
-let detachCardsResize: (() => void) | null = null
 let currentGameId: number | null = null
 let currentUserId: number | null = null
 let startButton: HTMLButtonElement | null = null
@@ -250,70 +249,6 @@ const updateStartButtonState = () => {
     } else {
         startButton.removeAttribute('title')
     }
-}
-
-const adjustCardsLayout = (totalCards: number) => {
-    const cardsContainer = document.getElementById('cardsContainer') as HTMLElement | null
-    if (!cardsContainer || totalCards <= 0) {
-        return
-    }
-
-    const styles = window.getComputedStyle(cardsContainer)
-    const paddingX = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight)
-    const paddingY = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom)
-    const gapValue = styles.getPropertyValue('--card-gap')
-    const gap = gapValue ? parseFloat(gapValue) : 16
-
-    const availableWidth = cardsContainer.clientWidth - paddingX
-    const availableHeight = cardsContainer.clientHeight - paddingY
-
-    if (availableWidth <= 0 || availableHeight <= 0) {
-        return
-    }
-
-    let columns = Math.ceil(Math.sqrt(totalCards * (availableWidth / availableHeight)))
-    columns = Math.max(1, Math.min(columns, totalCards))
-    let rows = Math.ceil(totalCards / columns)
-
-    const calcCardSize = () => {
-        const widthSpace = availableWidth - gap * (columns - 1)
-        const heightSpace = availableHeight - gap * (rows - 1)
-
-        if (widthSpace <= 0 || heightSpace <= 0) {
-            return 0
-        }
-
-        return Math.min(widthSpace / columns, heightSpace / rows)
-    }
-
-    let cardSize = calcCardSize()
-    const MAX_CARD_SIZE = 130
-    const MIN_CARD_SIZE = 60
-
-    while (cardSize <= MIN_CARD_SIZE && columns < totalCards) {
-        columns += 1
-        rows = Math.ceil(totalCards / columns)
-        cardSize = calcCardSize()
-    }
-
-    cardSize = Math.min(cardSize, MAX_CARD_SIZE)
-
-    cardsContainer.style.gridTemplateColumns = `repeat(${columns}, ${cardSize}px)`
-    cardsContainer.style.gridAutoRows = `${cardSize}px`
-}
-
-const setupCardsLayout = (totalCards: number) => {
-    if (detachCardsResize) {
-        detachCardsResize()
-        detachCardsResize = null
-    }
-
-    const update = () => adjustCardsLayout(totalCards)
-
-    window.addEventListener('resize', update)
-    detachCardsResize = () => window.removeEventListener('resize', update)
-
-    requestAnimationFrame(update)
 }
 
 const bindEditButton = (gameId: number) => {
@@ -610,7 +545,6 @@ const renderCards = () => {
     }
     
     // Crear un array de jugadores indexado por posición
-    // Los jugadores vienen como array de objetos, los mapeamos a posiciones
     const playersByPosition: (any | null)[] = new Array(maxPlayers).fill(null)
     
     // Asignar jugadores a las primeras posiciones disponibles
@@ -629,84 +563,89 @@ const renderCards = () => {
         const player = playersByPosition[i]
         const isEnabled = !!player
 
-        const cardWrapper = document.createElement('div')
-        cardWrapper.classList.add('card-wrapper')
-
-        const cardDiamond = document.createElement('div')
-        cardDiamond.classList.add('card-diamond')
+        // Crear tarjeta rectangular
+        const playerCard = document.createElement('div')
+        playerCard.classList.add('player-card')
+        
         if (!isEnabled) {
-            cardDiamond.classList.add('disabled')
+            playerCard.classList.add('disabled')
         }
 
         // Si la partida está en curso y hay votación, añadir clase votable
         if (isEnabled && isGameInProgress && votingInProgress && player) {
-            // No votar por ti mismo y solo jugadores vivos
             const isAlive = player.is_alive !== false
             const isNotSelf = player.id !== currentUserId
             
             if (isAlive && isNotSelf && !hasVoted) {
-                cardDiamond.classList.add('votable')
-                cardDiamond.addEventListener('click', () => handleVoteClick(player.id, player.nickname))
+                playerCard.classList.add('votable')
+                playerCard.addEventListener('click', () => handleVoteClick(player.id, player.nickname))
             }
             
             if (!isAlive) {
-                cardDiamond.classList.add('dead')
+                playerCard.classList.add('dead')
             }
         }
 
-        const cardContent = document.createElement('div')
-        cardContent.classList.add('card-content')
-
-        // Imagen del logo (siempre visible)
-        const cardImage = document.createElement('img')
-        cardImage.classList.add('card-image')
-        cardImage.src = '../public/logo.png'
-        cardImage.alt = isEnabled && player ? player.nickname : 'Jugador no asignado'
-        cardContent.appendChild(cardImage)
-
-        // Nickname del usuario (solo si está habilitado)
-        if (isEnabled && player && player.nickname) {
-            const cardNickname = document.createElement('div')
-            cardNickname.classList.add('card-nickname')
-            cardNickname.textContent = player.nickname
-            cardContent.appendChild(cardNickname)
+        // Avatar del jugador
+        const avatar = document.createElement('div')
+        avatar.classList.add('player-avatar')
+        
+        if (isEnabled && player) {
+            // Si tiene imagen, mostrarla
+            if (player.profile_image) {
+                const avatarImg = document.createElement('img')
+                avatarImg.src = player.profile_image
+                avatarImg.alt = player.nickname
+                avatar.appendChild(avatarImg)
+            } else {
+                // Mostrar inicial del nickname
+                avatar.textContent = player.nickname ? player.nickname.charAt(0).toUpperCase() : '?'
+            }
         } else {
-            // Mostrar etiqueta uX si no hay jugador
-            const cardLabel = document.createElement('div')
-            cardLabel.classList.add('card-label')
-            cardLabel.textContent = `u${i + 1}`
-            cardContent.appendChild(cardLabel)
+            avatar.textContent = '?'
+        }
+        playerCard.appendChild(avatar)
+
+        // Nickname del usuario
+        if (isEnabled && player && player.nickname) {
+            const nick = document.createElement('div')
+            nick.classList.add('player-nick')
+            nick.textContent = player.nickname
+            playerCard.appendChild(nick)
+        } else {
+            const label = document.createElement('div')
+            label.classList.add('player-label')
+            label.textContent = `Vacante ${i + 1}`
+            playerCard.appendChild(label)
         }
 
         // Mostrar votos si hay votación en curso
         if (isGameInProgress && votingInProgress && isEnabled && player) {
             const playerVotes = votes.get(player.id)
+            const votesDiv = document.createElement('div')
+            votesDiv.classList.add('player-votes')
+            votesDiv.id = `votes-${player.id}`
             if (playerVotes && playerVotes.length > 0) {
-                const votesDiv = document.createElement('div')
-                votesDiv.classList.add('card-votes')
                 votesDiv.textContent = `🗳️ ${playerVotes.length}`
-                cardContent.appendChild(votesDiv)
             }
+            playerCard.appendChild(votesDiv)
         }
 
         // Mostrar estado si está muerto
         if (isEnabled && player && player.is_alive === false) {
             const statusDiv = document.createElement('div')
-            statusDiv.classList.add('card-status')
-            statusDiv.textContent = '💀'
-            cardContent.appendChild(statusDiv)
+            statusDiv.classList.add('player-status')
+            statusDiv.textContent = '💀 Muerto'
+            playerCard.appendChild(statusDiv)
         }
 
-        cardDiamond.appendChild(cardContent)
-        cardWrapper.appendChild(cardDiamond)
-        cardsContainer.appendChild(cardWrapper)
+        cardsContainer.appendChild(playerCard)
     }
 
-    setupCardsLayout(maxPlayers)
     updateStartButtonState()
 }
 
-// ==================== FUNCIONES DE JUEGO ====================
+// Funciones de juego
 
 /**
  * Maneja el clic para votar

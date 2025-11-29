@@ -576,7 +576,16 @@ const renderPagination = (pagination: any) => {
 /**
  * Abandona la partida actual y se une a una nueva
  */
+let isChangingGame = false // Flag para evitar bucles al cambiar de partida
+
 const handleLeaveAndJoin = async (currentGameId: number, newGameId: number) => {
+    if (isChangingGame) {
+        console.log('Ya hay un cambio de partida en progreso, ignorando')
+        return
+    }
+    
+    isChangingGame = true
+    
     try {
         console.log('Abandonando partida actual:', currentGameId)
         const leaveResponse = await leaveGame(currentGameId)
@@ -600,18 +609,38 @@ const handleLeaveAndJoin = async (currentGameId: number, newGameId: number) => {
         
         if (leaveData.success) {
             console.log('Partida abandonada, uniéndose a la nueva:', newGameId)
-            // Ahora intentar unirse a la nueva partida
-            await handleJoinGame(newGameId)
+            // Unirse directamente a la nueva partida (sin pasar por handleJoinGame para evitar bucles)
+            const joinResponse = await joinGame(newGameId)
+            
+            if (joinResponse.ok) {
+                const joinData = await joinResponse.json()
+                if (joinData.success) {
+                    window.location.href = `${routes.gameLobby}?gameId=${newGameId}`
+                    return
+                }
+            }
+            
+            // Si falla, mostrar error y redirigir a findGame
+            alert('Error al unirse a la nueva partida. Vuelve a intentarlo.')
+            window.location.href = routes.findGame
         } else {
             alert(leaveData.message || 'Error al abandonar la partida actual')
         }
     } catch (error) {
         console.error('Error al abandonar y unirse:', error)
         alert('Error de conexión al abandonar la partida')
+    } finally {
+        isChangingGame = false
     }
 }
 
 const handleJoinGame = async (gameId: number) => {
+    // Si ya estamos cambiando de partida, no hacer nada
+    if (isChangingGame) {
+        console.log('Cambio de partida en progreso, ignorando solicitud de unirse')
+        return
+    }
+    
     try {
         // Validar que gameId sea un número válido
         if (!gameId || isNaN(gameId)) {
@@ -640,6 +669,13 @@ const handleJoinGame = async (gameId: number) => {
                 }
                 // Si el usuario está en otra partida activa, preguntar si quiere abandonarla
                 if (response.status === 422 && data.message && data.message.includes('Ya estás unido a otra partida') && data.current_game) {
+                    // Si es la misma partida, redirigir directamente
+                    if (data.current_game.id === gameId) {
+                        console.log('Es la misma partida, redirigiendo al lobby')
+                        window.location.href = `${routes.gameLobby}?gameId=${gameId}`
+                        return
+                    }
+                    
                     const currentGameName = data.current_game.name || 'la partida actual'
                     const confirmed = confirm(`Ya estás unido a la partida "${currentGameName}". ¿Quieres abandonarla para unirte a esta nueva partida?`)
                     
