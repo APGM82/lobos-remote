@@ -4,12 +4,18 @@ use App\Http\Controllers\API\CharacterController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\GameController;
+use App\Http\Controllers\API\GamePlayController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [AuthController::class, 'register']);
+// Rutas de autenticación públicas
+Route::prefix('auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
-// Login (sin autenticación)
+// Mantener rutas antiguas para compatibilidad (sin prefijo auth)
+Route::post('/register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login']);
 
 // Ruta de debug - ver usuarios y sus roles (sin autenticación para facilitar el debug)
@@ -76,6 +82,32 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::group(['prefix' => 'game'], function () {
         Route::post('assignCharacters/{idGame}', [CharacterController::class, 'assignCharactersToUser']);
+        
+        // Rutas para obtener jugadores y matar (gameplay demo)
+        Route::get('/{id}/players', [GameController::class, 'getPlayers'])->whereNumber('id');
+        Route::post('/{id}/kill', [GameController::class, 'killPlayer'])->whereNumber('id');
+    });
+
+    // Rutas del gameplay (fases, votaciones, acciones de personajes)
+    Route::prefix('gameplay/{gameId}')->whereNumber('gameId')->group(function () {
+        // Estado del juego
+        Route::get('/state', [GamePlayController::class, 'getGameState']);
+        Route::post('/start', [GamePlayController::class, 'startGame']);
+        Route::post('/next-phase', [GamePlayController::class, 'nextPhase']);
+        
+        // Votaciones
+        Route::post('/wolves/start', [GamePlayController::class, 'startWolvesVoting']);
+        Route::post('/village/start', [GamePlayController::class, 'startVillageVoting']);
+        Route::post('/vote', [GamePlayController::class, 'vote']);
+        Route::post('/vote/resolve', [GamePlayController::class, 'resolveVoting']);
+        
+        // Acciones de personajes (placeholders)
+        Route::post('/action/cupid', [GamePlayController::class, 'cupidAction']);
+        Route::post('/action/thief', [GamePlayController::class, 'thiefAction']);
+        Route::post('/action/protector', [GamePlayController::class, 'protectorAction']);
+        Route::post('/action/seer', [GamePlayController::class, 'seerAction']);
+        Route::post('/action/witch', [GamePlayController::class, 'witchAction']);
+        Route::post('/action/hunter', [GamePlayController::class, 'hunterAction']);
     });
 
     // Rutas de usuarios (requiere autenticación)

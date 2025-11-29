@@ -997,5 +997,102 @@ class GameController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtener jugadores de una partida con su estado is_alive
+     */
+    public function getPlayers($id)
+    {
+        try {
+            $user = request()->user();
+            $game = Game::find($id);
+
+            if (!$game) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Partida no encontrada'
+                ], 404);
+            }
+
+            $players = GameLobby::where('id_game', $id)
+                ->with(['user:id,name,nickname', 'character:id,name'])
+                ->get()
+                ->map(function ($lobby) {
+                    return [
+                        'id' => $lobby->user->id,
+                        'lobbyId' => $lobby->id,
+                        'nick' => $lobby->user->nickname ?? $lobby->user->name,
+                        'isAlive' => (bool) $lobby->is_alive,
+                        'character' => $lobby->character->name ?? null,
+                    ];
+                });
+
+            $currentPlayerId = $user ? $user->id : ($players->first()['id'] ?? 0);
+            $currentPlayer = $players->firstWhere('id', $currentPlayerId);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'gameId' => $game->id,
+                    'gameName' => $game->name,
+                    'players' => $players,
+                    'currentPlayerId' => $currentPlayerId,
+                    'isCurrentPlayerAlive' => $currentPlayer ? $currentPlayer['isAlive'] : true
+                ]
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener jugadores: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Marcar un jugador como muerto
+     */
+    public function killPlayer(Request $request, $id)
+    {
+        try {
+            $game = Game::find($id);
+
+            if (!$game) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Partida no encontrada'
+                ], 404);
+            }
+
+            $playerId = $request->input('player_id');
+
+            $lobby = GameLobby::where('id_game', $id)
+                ->where('id_user', $playerId)
+                ->first();
+
+            if (!$lobby) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Jugador no encontrado en la partida'
+                ], 404);
+            }
+
+            $lobby->is_alive = 0;
+            $lobby->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Jugador marcado como muerto',
+                'data' => [
+                    'playerId' => $playerId,
+                    'isAlive' => false
+                ]
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al matar jugador: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
 
