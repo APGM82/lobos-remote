@@ -25,6 +25,9 @@ let isUpdatingGame = false
 let gameMode: 'lobby' | 'playing' = 'lobby'
 let hasVoted = false
 let votingInProgress = false
+let votingType: 'wolves' | 'village' | null = null
+let eligibleVoters: number[] = []
+let eligibleTargets: number[] = []
 let votes: Map<number, number[]> = new Map()
 let currentPhase: string = 'lobby'
 let timerInterval: number | null = null
@@ -571,7 +574,11 @@ const renderCards = () => {
             const isAlive = player.is_alive !== false
             const isNotSelf = player.id !== currentUserId
             
-            if (isAlive && isNotSelf && !hasVoted) {
+            // Verificar si el usuario actual puede votar y si el jugador es un objetivo válido
+            const canUserVote = eligibleVoters.length === 0 || eligibleVoters.includes(currentUserId!)
+            const isValidTarget = eligibleTargets.length === 0 || eligibleTargets.includes(player.id)
+            
+            if (isAlive && isNotSelf && !hasVoted && canUserVote && isValidTarget) {
                 playerCard.classList.add('votable')
                 playerCard.addEventListener('click', () => handleVoteClick(player.id, player.nickname))
             }
@@ -651,7 +658,7 @@ const handleVoteClick = async (targetId: number, targetNickname: string) => {
     
     try {
         const token = getToken()
-        const response = await fetch(`http://127.0.0.1:8000/api/gameplay/${currentGameId}/vote`, {
+        const response = await fetch(`${routes.gameplayUrl}/${currentGameId}/vote`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -787,6 +794,9 @@ const handlePhaseChange = (phase: string, message: string, duration: number) => 
         renderCards()
     } else {
         votingInProgress = false
+        votingType = null
+        eligibleVoters = []
+        eligibleTargets = []
     }
 }
 
@@ -1107,6 +1117,26 @@ const initLobbyUpdates = async (gameId: number) => {
             }
         })
 
+        // Escuchar evento de inicio de votación
+        lobbyChannel.bind('voting.started', (data: any) => {
+            console.log('Votación iniciada:', data)
+            
+            if (data.gameId === currentGameId) {
+                votingInProgress = true
+                votingType = data.votingType
+                eligibleVoters = data.eligibleVoters || []
+                eligibleTargets = data.eligibleTargets || []
+                hasVoted = false
+                votes.clear()
+                
+                console.log('Votantes elegibles:', eligibleVoters)
+                console.log('Objetivos elegibles:', eligibleTargets)
+                
+                // Re-renderizar las cartas para actualizar el estado visual
+                renderCards()
+            }
+        })
+
         // Escuchar evento de voto recibido
         lobbyChannel.bind('game.vote.received', (data: any) => {
             console.log('Voto recibido:', data)
@@ -1114,6 +1144,94 @@ const initLobbyUpdates = async (gameId: number) => {
             if (data.game_id === currentGameId && data.votes) {
                 processVotes(data.votes)
             }
+        })
+
+        // Escuchar evento de fin de votación
+        lobbyChannel.bind('voting.ended', (data: any) => {
+            console.log('Votación finalizada:', data)
+            
+            if (data.gameId === currentGameId) {
+                votingInProgress = false
+                votingType = null
+                eligibleVoters = []
+                eligibleTargets = []
+                hasVoted = false
+                votes.clear()
+                
+                // Mostrar resultado de la votación
+                if (data.eliminatedPlayerNick) {
+                    addGameMessage(`${data.eliminatedPlayerNick} ha sido eliminado por votación`, 'system')
+                } else {
+                    addGameMessage('La votación ha terminado sin eliminados', 'system')
+                }
+                
+                // Re-renderizar las cartas
+                renderCards()
+            }
+        })
+
+        // Jugador eliminado
+        lobbyChannel.bind('player.killed', (data: any) => {
+            console.log('Jugador eliminado:', data)
+            
+            const causeText: Record<string, string> = {
+                'wolves': 'ha sido devorado por los lobos',
+                'village': 'ha sido linchado por el pueblo',
+                'witch': 'ha sido envenenado por la bruja',
+                'hunter': 'ha sido cazado',
+                'lovers': 'ha muerto de amor'
+            }
+            
+            const msg = causeText[data.cause] || 'ha sido eliminado'
+            addGameMessage(`${data.playerNick} ${msg}`, 'system')
+            
+            // Marcar jugador como muerto en gameData
+            if (gameData?.players) {
+                const player = gameData.players.find((p: any) => p.id === data.playerId)
+                if (player) player.is_alive = false
+            }
+            
+            renderCards()
+        })
+
+        // Mensajes del juego
+        lobbyChannel.bind('game.message', (data: any) => {
+            console.log('Mensaje del juego:', data)
+            addGameMessage(data.message, data.type || 'system')
+        })
+
+        // Fin de partida
+        lobbyChannel.bind('game.ended', (data: any) => {
+            console.log('Partida terminada:', data)
+            
+            const winnerText: Record<string, string> = {
+                'wolves': 'Los lobos han ganado',
+                'village': 'El pueblo ha ganado',
+                'lovers': 'Los enamorados han ganado'
+            }
+            
+            const msg = winnerText[data.winner] || 'La partida ha terminado'
+            addGameMessage(msg, 'system')
+            
+            // Mostrar supervivientes
+            if (data.survivors?.length > 0) {
+                const names = data.survivors.map((s: any) => s.nickname || s.nick).join(', ')
+                addGameMessage(`Supervivientes: ${names}`, 'system')
+            }
+            
+            gameMode = 'lobby'
+            stopPhaseTimer()
+        })
+
+        // Solicitud de acción
+        lobbyChannel.bind('action.prompt', (data: any) => {
+            console.log('Acción requerida:', data)
+            
+            // Solo mostrar si es para el jugador actual
+            if (data.targetPlayerId !== currentUserId) return
+            
+            // TODO: mostrar modal de acción segun actionType
+            console.log('Debes realizar una acción:', data.actionType)
         })
 
         // Eventos de conexión
