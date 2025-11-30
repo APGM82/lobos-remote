@@ -1,14 +1,12 @@
-# Imagen base con PHP
+# Dockerfile específico para el servicio Reverb
+# Basado en el Dockerfile principal pero optimizado para Reverb
+
 FROM php:8.2-fpm
 
 # Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
     git unzip curl libonig-dev libzip-dev zip netcat-openbsd \
     && docker-php-ext-install pdo pdo_mysql mbstring zip pcntl
-
-# Instalar Node.js y npm para dependencias de broadcasting (opcional, pero elimina warnings)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
 
 # Instalar Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -28,7 +26,7 @@ RUN if [ -f composer.lock ]; then \
         composer update --optimize-autoloader; \
     fi
 
-# Copiar .env.example a .env si no existe .env (para poder ejecutar migraciones)
+# Copiar .env.example a .env si no existe .env
 RUN if [ ! -f ".env" ]; then \
         if [ -f ".env.example" ]; then \
             cp .env.example .env; \
@@ -40,21 +38,13 @@ RUN if ! grep -q "APP_KEY=base64:" .env 2>/dev/null; then \
         php artisan key:generate --force || true; \
     fi
 
-# Nota: Las migraciones se ejecutarán en el entrypoint cuando el contenedor se inicie
-# porque necesitan que la base de datos esté disponible
-
-# Dar permisos de ejecución al entrypoint (compatible con Windows)
-
-COPY entrypoint.sh /entrypoint.sh
+# Dar permisos de ejecución al entrypoint de Reverb
 COPY entrypoint-reverb.sh /entrypoint-reverb.sh
-RUN chmod +x /entrypoint.sh /entrypoint-reverb.sh && sed -i 's/\r$//' /entrypoint.sh && sed -i 's/\r$//' /entrypoint-reverb.sh
+RUN chmod +x /entrypoint-reverb.sh && sed -i 's/\r$//' /entrypoint-reverb.sh
 
-# Exponer puertos
-EXPOSE 8000 8080
+# Exponer puerto de Reverb
+EXPOSE 8080
 
-# Usar sh explícitamente para evitar problemas de permisos 
-ENTRYPOINT ["sh", "entrypoint.sh"]
-
-# Descomentar para windows 
-# ENTRYPOINT ["./entrypoint.sh"]
+# Usar el entrypoint específico de Reverb
+ENTRYPOINT ["sh", "/entrypoint-reverb.sh"]
 

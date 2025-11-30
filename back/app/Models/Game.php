@@ -30,4 +30,11 @@ class Game extends Model
     public function users() {
         return $this->belongsToMany(User::class, 'game_lobbies', 'id_game', 'id_user');
     }
+
+    /**
+     * Relación con mensajes del chat
+     */
+    public function chatMessages() {
+        return $this->hasMany(ChatMessage::class, 'game_id');
+    }
 }

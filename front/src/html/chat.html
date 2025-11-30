@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - Hombres Lobo de Castronegro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/chat.css">
+</head>
+<body>
+    <header class="header" id="header">
+        <div class="left-group">
+            <a href="home.html">
+                <img src="../public/logo.png" alt="Logo" class="icon-left" />
+                <span class="title">Lobos de Castronegro</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="chat-main">
+        <div class="chat-container">
+            <h1 class="chat-title">Chat de Partida</h1>
+            
+            <div class="status-indicator">
+                <p>
+                    Estado del servidor:
+                    <span id="lblOn" class="status-online">Online</span>
+                    <span id="lblOff" class="status-offline">Offline</span>
+                </p>
+            </div>
+
+            <div class="chat-messages-container">
+                <ul id="messages" class="messages-list"></ul>
+            </div>
+
+            <div class="chat-input-container">
+                <div class="message-type-selector">
+                    <label for="messageType">Tipo de mensaje:</label>
+                    <select id="messageType" class="message-type-select">
+                        <option value="public">🌐 Público (todos)</option>
+                        <option value="private">🔒 Privado</option>
+                        <option value="group">👥 Grupo</option>
+                    </select>
+                </div>
+
+                <div class="recipient-selector" style="display: none;">
+                    <label for="recipient">Destinatario:</label>
+                    <select id="recipient" class="recipient-select">
+                        <option value="">Selecciona destinatario...</option>
+                    </select>
+                </div>
+
+                <div class="recipients-selector" style="display: none;">
+                    <label>Destinatarios (selecciona al menos 2):</label>
+                    <div id="recipients"></div>
+                </div>
+
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="txtMensaje" 
+                        class="chat-input" 
+                        placeholder="Escribe tu mensaje..."
+                        maxlength="1000"
+                    />
+                    <button id="btnEnviar" class="chat-button">Enviar</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="../ts/chat.ts"></script>
+</body>
+</html>
+

@@ -23,6 +23,19 @@ services:
     depends_on:
       - backend
 
+  reverb:
+    build:
+      context: ./back
+      dockerfile: Dockerfile.reverb
+    container_name: laravel_reverb
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./back:/var/www/html
+    depends_on:
+      - backend
+      - db
+
   db:
     image: mysql:8
     container_name: mysql_db

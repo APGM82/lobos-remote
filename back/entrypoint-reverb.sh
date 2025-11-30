@@ -20,16 +20,22 @@ if ! grep -q "APP_KEY=base64:" .env; then
   php artisan key:generate --force
 fi
 
-echo "Esperando a que MySQL esté disponible..."
-until nc -z db 3306; do
-  echo "Aún no está lista la base de datos..."
+echo "Esperando a que el backend esté disponible..."
+until nc -z backend 8000; do
+  echo "Aún no está listo el backend..."
   sleep 2
 done
 
-echo "Base de datos lista, verificando conexión..."
-# Las migraciones se ejecutan manualmente cuando sea necesario
-# Para ejecutar migraciones: docker-compose exec backend php artisan migrate
+echo "Iniciando Laravel Reverb en el puerto 8080"
+# Forzar host 0.0.0.0 para aceptar conexiones desde fuera del contenedor
+# Esto es necesario porque Docker mapea el puerto al host
+exec php artisan reverb:start --debug  
 
 
-echo "Iniciando servidor de laravel puerto 8000"
-exec php artisan serve --host=0.0.0.0 --port=8000
+
+
+
+
+
+
+         

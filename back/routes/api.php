@@ -4,6 +4,8 @@ use App\Http\Controllers\API\CharacterController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\GameController;
+use App\Http\Controllers\API\ViteConfigController;
+use App\Http\Controllers\ChatController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +13,9 @@ Route::post('/register', [AuthController::class, 'register']);
 
 // Login (sin autenticación)
 Route::post('login', [AuthController::class, 'login']);
+
+// Configuración de Vite (pública, sin autenticación)
+Route::get('/vite-config', [ViteConfigController::class, 'index']);
 
 // Ruta de debug - ver usuarios y sus roles (sin autenticación para facilitar el debug)
 Route::get('/debug/users-roles', function () {
@@ -74,9 +79,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/findGame/{id}/leave', [GameController::class, 'leave'])->whereNumber('id');
     Route::post('/findGame/{id}/start', [GameController::class, 'start'])->whereNumber('id');
 
-    Route::group(['prefix' => 'game'], function () {
-        Route::post('assignCharacters/{idGame}', [CharacterController::class, 'assignCharactersToUser']);
-    });
+    // Rutas de chat (requieren autenticación y participación en la partida)
+    Route::post('/chat/{gameId}/send', [ChatController::class, 'sendPublic'])->whereNumber('gameId');
+    Route::post('/chat/{gameId}/send-private', [ChatController::class, 'sendPrivate'])->whereNumber('gameId');
+    Route::post('/chat/{gameId}/send-group', [ChatController::class, 'sendGroup'])->whereNumber('gameId');
+    Route::get('/chat/{gameId}/history', [ChatController::class, 'getHistory'])->whereNumber('gameId');
 
     // Rutas de usuarios (requiere autenticación)
     Route::middleware(['user'])->group(function () {

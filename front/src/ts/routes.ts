@@ -11,6 +11,7 @@ const routes = {
     findGame : 'findGame.html',
     gamesUrl : 'http://127.0.0.1:8000/api/findGame',
     gameLobby : 'gameLobby.html',
+    chat: 'chat.html',
     home: 'home.html'
 }
 
