@@ -1,6 +1,12 @@
 import { getGameInfo, leaveGame, startGame, updateGameDetails } from './CrudLobby.ts'
 import { requireAuth, getUser, getToken } from '../auth.ts'
 import routes from '../routes.ts'
+import Pusher from 'pusher-js';
+import { 
+    loadConfig,
+    getReverbConfig,
+    getApiConfig
+} from '../chatWebsocket/connection/config';
 
 let gameData: any = null
 let currentGameId: number | null = null
@@ -19,11 +25,9 @@ let isUpdatingGame = false
 let gameMode: 'lobby' | 'playing' = 'lobby'
 let hasVoted = false
 let votingInProgress = false
-let votes: Map<number, number[]> = new Map() // targetId -> voterId[]
+let votes: Map<number, number[]> = new Map()
 let currentPhase: string = 'lobby'
 let timerInterval: number | null = null
-let isPollingEnabled = false
-let pollIntervalId: number | null = null
 
 const resolveCurrentUserId = async (): Promise<number | null> => {
     const storedUser = getUser()
@@ -65,19 +69,14 @@ const resolveCurrentUserId = async (): Promise<number | null> => {
     return null
 }
 
-/**
- * Obtiene el ID de la partida desde la URL
- * @returns ID de la partida o null si no se encuentra
- */
+// Obtiene el ID de la partida desde la URL
 const getGameIdFromUrl = (): number | null => {
     const urlParams = new URLSearchParams(window.location.search)
     const gameId = urlParams.get('gameId')
     return gameId ? parseInt(gameId, 10) : null
 }
 
-/**
- * Carga la información de la partida desde el backend
- */
+// Carga la info de la partida
 const loadGameInfo = async (gameId: number) => {
     try {
         const response = await getGameInfo(gameId)
@@ -112,9 +111,7 @@ const loadGameInfo = async (gameId: number) => {
     }
 }
 
-/**
- * Actualiza la información del lobby (título e instrucciones)
- */
+// Actualiza titulo e instrucciones del lobby
 const updateLobbyInfo = () => {
     if (!gameData) return
 
@@ -368,7 +365,7 @@ const bindEditButton = (gameId: number) => {
                 closeModal()
                 updateLobbyInfo()
                 renderCards()
-                alert(data.message || 'Partida actualizada correctamente')
+                // La actualización se refleja automáticamente vía websocket, no se muestra alerta
             } else {
                 alert(data.message || 'Error al actualizar la partida')
             }
@@ -528,9 +525,7 @@ const bindAbandonButton = (gameId: number) => {
     abandonBtn.addEventListener('click', handleClick)
 }
 
-/**
- * Renderiza las cartas de votación dinámicamente
- */
+// Renderiza las cartas de jugadores
 const renderCards = () => {
     const cardsContainer = document.getElementById('cardsContainer')
     if (!cardsContainer || !gameData) return
@@ -591,14 +586,12 @@ const renderCards = () => {
         avatar.classList.add('player-avatar')
         
         if (isEnabled && player) {
-            // Si tiene imagen, mostrarla
             if (player.profile_image) {
                 const avatarImg = document.createElement('img')
                 avatarImg.src = player.profile_image
                 avatarImg.alt = player.nickname
                 avatar.appendChild(avatarImg)
             } else {
-                // Mostrar inicial del nickname
                 avatar.textContent = player.nickname ? player.nickname.charAt(0).toUpperCase() : '?'
             }
         } else {
@@ -645,11 +638,7 @@ const renderCards = () => {
     updateStartButtonState()
 }
 
-// Funciones de juego
-
-/**
- * Maneja el clic para votar
- */
+// Click en votar
 const handleVoteClick = async (targetId: number, targetNickname: string) => {
     if (hasVoted || !votingInProgress || !currentGameId) {
         return
@@ -672,10 +661,9 @@ const handleVoteClick = async (targetId: number, targetNickname: string) => {
         })
 
         if (response.ok) {
-            await response.json() // Consumir respuesta
+            await response.json()
             addGameMessage(`Has votado por ${targetNickname}`, 'action')
             
-            // Actualizar votos localmente
             if (!votes.has(targetId)) {
                 votes.set(targetId, [])
             }
@@ -692,14 +680,11 @@ const handleVoteClick = async (targetId: number, targetNickname: string) => {
     }
 }
 
-/**
- * Añade un mensaje al chat del juego
- */
+// Añade mensaje al chat
 const addGameMessage = (message: string, type: 'system' | 'action' | 'chat' | 'wolves_chat' = 'system') => {
     const chatMessages = document.getElementById('chatMessages')
     if (!chatMessages) return
 
-    // Quitar placeholder si existe
     const placeholder = chatMessages.querySelector('.chat-placeholder')
     if (placeholder) {
         placeholder.remove()
@@ -715,9 +700,7 @@ const addGameMessage = (message: string, type: 'system' | 'action' | 'chat' | 'w
     chatMessages.scrollTop = chatMessages.scrollHeight
 }
 
-/**
- * Actualiza la barra de estado del juego
- */
+// Actualiza la barra de estado
 const updateGameStatusBar = () => {
     const phaseDisplay = document.getElementById('phaseDisplay')
     const connectionStatus = document.getElementById('connectionStatus')
@@ -752,9 +735,7 @@ const updateGameStatusBar = () => {
     }
 }
 
-/**
- * Inicia el timer de la fase
- */
+// Inicia el timer
 const startPhaseTimer = (duration: number) => {
     stopPhaseTimer()
     
@@ -771,9 +752,7 @@ const startPhaseTimer = (duration: number) => {
     }, 1000)
 }
 
-/**
- * Detiene el timer
- */
+// Para el timer
 const stopPhaseTimer = () => {
     if (timerInterval) {
         clearInterval(timerInterval)
@@ -781,9 +760,7 @@ const stopPhaseTimer = () => {
     }
 }
 
-/**
- * Actualiza el display del timer
- */
+// Actualiza el timer en pantalla
 const updateTimerDisplay = (seconds: number) => {
     const timerDisplay = document.getElementById('timerDisplay')
     if (timerDisplay) {
@@ -793,9 +770,7 @@ const updateTimerDisplay = (seconds: number) => {
     }
 }
 
-/**
- * Maneja el cambio de fase del juego
- */
+// Cambio de fase
 const handlePhaseChange = (phase: string, message: string, duration: number) => {
     currentPhase = phase
     updateGameStatusBar()
@@ -805,7 +780,6 @@ const handlePhaseChange = (phase: string, message: string, duration: number) => 
         startPhaseTimer(duration)
     }
 
-    // Si es fase de votación diurna
     if (phase === 'day') {
         votingInProgress = true
         hasVoted = false
@@ -816,79 +790,16 @@ const handlePhaseChange = (phase: string, message: string, duration: number) => 
     }
 }
 
-/**
- * Inicia el polling del estado del juego
- */
-const startGamePolling = () => {
-    if (isPollingEnabled) return
-    isPollingEnabled = true
-
-    const poll = async () => {
-        if (!currentGameId || !isPollingEnabled) return
-
-        try {
-            const token = getToken()
-            const response = await fetch(`http://127.0.0.1:8000/api/gameplay/${currentGameId}/state`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-
-            if (response.ok) {
-                const data = await response.json()
-                if (data.success && data.data) {
-                    processGameState(data.data)
-                }
-            }
-        } catch (error) {
-            console.error('Error al obtener estado del juego:', error)
-        }
+// Procesa votos del websocket
+const processVotes = (votesData: Record<string, number[]>) => {
+    votes.clear()
+    for (const [targetId, voterIds] of Object.entries(votesData)) {
+        votes.set(parseInt(targetId), voterIds)
     }
-
-    // Poll cada 3 segundos
-    pollIntervalId = window.setInterval(poll, 3000)
-    poll() // Primera llamada inmediata
+    renderCards()
 }
 
-/**
- * Detiene el polling
- */
-const stopGamePolling = () => {
-    isPollingEnabled = false
-    if (pollIntervalId) {
-        clearInterval(pollIntervalId)
-        pollIntervalId = null
-    }
-}
-
-/**
- * Procesa el estado del juego recibido del servidor
- */
-const processGameState = (state: any) => {
-    if (state.phase && state.phase !== currentPhase) {
-        handlePhaseChange(state.phase, state.phase_message || `Fase: ${state.phase}`, state.timer || 0)
-    }
-
-    if (state.voting_in_progress !== undefined) {
-        votingInProgress = state.voting_in_progress
-    }
-
-    if (state.votes) {
-        votes.clear()
-        for (const [targetId, voterIds] of Object.entries(state.votes)) {
-            votes.set(parseInt(targetId), voterIds as number[])
-        }
-    }
-
-    if (state.players) {
-        gameData.players = state.players
-        renderCards()
-    }
-}
-
-/**
- * Verifica si la partida está en curso y activa el modo juego
- */
+// Verifica si la partida esta en curso
 const checkGameMode = () => {
     const statusName = getStatusName(gameData?.status).toLowerCase()
     const isGameInProgress = statusName === 'en_progreso' || statusName === 'en_curso'
@@ -896,18 +807,332 @@ const checkGameMode = () => {
     if (isGameInProgress && gameMode !== 'playing') {
         gameMode = 'playing'
         updateGameStatusBar()
-        startGamePolling()
         addGameMessage('🎮 ¡La partida ha comenzado!', 'system')
     } else if (!isGameInProgress && gameMode === 'playing') {
         gameMode = 'lobby'
-        stopGamePolling()
         stopPhaseTimer()
     }
 }
 
-/**
- * Inicializa la vista del lobby
- */
+// ======== Variables para el chat ========
+let pusher: Pusher | null = null
+let chatChannels: any[] = []
+let chatInitialized = false
+
+// ======== Variables para actualizaciones del lobby ========
+let lobbyChannel: any = null
+let lobbyUpdatesInitialized = false
+
+// Renderiza mensaje en el chat
+const renderChatMessage = (data: any, container: HTMLElement) => {
+    const messageDiv = document.createElement('div')
+    messageDiv.classList.add('chat-message')
+
+    const userName = data.user_name || data.user_nickname || 'Usuario'
+
+    let typePrefix = ''
+    if (data.type === 'private') {
+        typePrefix = '🔒 '
+    } else if (data.type === 'group') {
+        typePrefix = '👥 '
+    }
+
+    messageDiv.textContent = `${typePrefix}${userName}: ${data.message}`
+    container.appendChild(messageDiv)
+    container.scrollTop = container.scrollHeight
+}
+
+// Carga historial del chat
+const loadChatHistory = async (gameId: number, container: HTMLElement) => {
+    const { loadChatHistory: loadHistory } = await import('../chatWebsocket/chatArchive')
+    
+    const messages = await loadHistory(gameId)
+    
+    if (messages && messages.length > 0) {
+        // Limpiar mensajes existentes
+        container.innerHTML = ''
+        
+        // Renderizar mensajes del historial
+        messages.forEach((msg) => {
+            renderChatMessage(msg, container)
+        })
+    }
+}
+
+// Inicializa el chat
+const initChat = async (gameId: number) => {
+    if (chatInitialized) return
+
+    const chatMessagesContainer = document.getElementById('chatMessages')
+    const chatInput = document.getElementById('chatInput') as HTMLInputElement
+    const sendMessageBtn = document.getElementById('sendMessageBtn') as HTMLButtonElement
+
+    if (!chatMessagesContainer || !chatInput || !sendMessageBtn) {
+        console.warn('Elementos del chat no encontrados')
+        return
+    }
+
+    try {
+        // Cargar configuración
+        await loadConfig()
+        const reverbConfig = getReverbConfig()
+        const apiConfig = getApiConfig()
+
+        // Determinar el host WebSocket
+        const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'localhost'
+            : reverbConfig.host === '127.0.0.1'
+            ? 'localhost'
+            : reverbConfig.host
+
+        const token = getToken()
+        if (!token) {
+            console.error('No hay token de autenticación para el chat')
+            return
+        }
+
+        // Configurar Pusher
+
+        // Configurar Pusher
+        pusher = new Pusher(reverbConfig.appKey, {
+            wsHost: wsHost,
+            wsPort: reverbConfig.port,
+            forceTLS: false,
+            enabledTransports: ['ws'],
+            cluster: reverbConfig.cluster,
+            disableStats: true,
+            authEndpoint: `http://${apiConfig.host}:${apiConfig.port}/broadcasting/auth`,
+            auth: {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            }
+        })
+
+        // Suscribirse a canales
+        const publicChannel = pusher.subscribe(`chat.game.${gameId}.public`)
+        chatChannels.push(publicChannel)
+
+        if (currentUserId) {
+            const privateChannel = pusher.subscribe(`private-chat.game.${gameId}.private.${currentUserId}`)
+            chatChannels.push(privateChannel)
+            
+            const groupChannel = pusher.subscribe(`private-chat.game.${gameId}.group.${currentUserId}`)
+            chatChannels.push(groupChannel)
+        }
+
+        // Eventos de conexión
+        pusher.connection.bind('connected', () => {
+            console.info('✅ Chat conectado a Reverb')
+            const statusIndicator = document.querySelector('.chat-status-indicator')
+            if (statusIndicator) {
+                statusIndicator.classList.add('online')
+            }
+        })
+
+        pusher.connection.bind('error', (err: any) => {
+            console.error('⚠️ Error en conexión del chat:', err)
+            const statusIndicator = document.querySelector('.chat-status-indicator')
+            if (statusIndicator) {
+                statusIndicator.classList.remove('online')
+            }
+        })
+
+        // Handler para mensajes públicos
+        publicChannel.bind('message.sent', (data: any) => {
+            if (data.type === 'public' && data.game_id === gameId) {
+                renderChatMessage(data, chatMessagesContainer)
+            }
+        })
+
+        // Handler para mensajes privados
+        if (currentUserId && chatChannels.length > 1) {
+            const privateChannel = chatChannels.find(c => c.name && c.name.includes(`private.${currentUserId}`))
+            if (privateChannel) {
+                privateChannel.bind('message.sent', (data: any) => {
+                    if (data.type === 'private' && 
+                        data.game_id === gameId &&
+                        (data.user_id === currentUserId || data.recipient_id === currentUserId)) {
+                        renderChatMessage(data, chatMessagesContainer)
+                    }
+                })
+            }
+
+            // Handler para mensajes de grupo
+            const groupChannel = chatChannels.find(c => c.name && c.name.includes(`group.${currentUserId}`))
+            if (groupChannel) {
+                groupChannel.bind('message.sent', (data: any) => {
+                    if (data.type === 'group' && 
+                        data.game_id === gameId &&
+                        (data.user_id === currentUserId || 
+                         (data.recipient_ids && data.recipient_ids.includes(currentUserId)))) {
+                        renderChatMessage(data, chatMessagesContainer)
+                    }
+                })
+            }
+        }
+
+        // Cargar historial
+        await loadChatHistory(gameId, chatMessagesContainer)
+
+        // Event listener para enviar mensaje
+        const sendMessage = async () => {
+            const message = chatInput.value.trim()
+            if (!message) return
+
+            const apiConfig = getApiConfig()
+            const url = `http://${apiConfig.host}:${apiConfig.port}/api/chat/${gameId}/send`
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                })
+
+                if (response.ok) {
+                    chatInput.value = ''
+                } else {
+                    const error = await response.json()
+                    alert(error.message || 'Error al enviar el mensaje')
+                }
+            } catch (error) {
+                console.error('Error al enviar mensaje:', error)
+                alert('Error de conexión al enviar el mensaje')
+            }
+        }
+
+        sendMessageBtn.addEventListener('click', sendMessage)
+        chatInput.addEventListener('keypress', (e: KeyboardEvent) => {
+            if (e.key === 'Enter') {
+                sendMessage()
+            }
+        })
+
+        chatInitialized = true
+    } catch (error) {
+        console.error('Error al inicializar el chat:', error)
+    }
+}
+
+// Inicializa actualizaciones del lobby via websocket
+const initLobbyUpdates = async (gameId: number) => {
+    if (lobbyUpdatesInitialized) return
+
+    try {
+        // Si ya tenemos una instancia de Pusher del chat, reutilizarla
+        // Si no existe, el chat la creará primero
+        if (!pusher) {
+            console.warn('Pusher no inicializado. El chat debe inicializarse primero.')
+            return
+        }
+
+        // Suscribirse al canal del lobby
+        lobbyChannel = pusher.subscribe(`game.lobby.${gameId}`)
+
+        // Escuchar evento cuando un jugador se une
+        lobbyChannel.bind('player.joined', async (data: any) => {
+            console.log('Jugador se unió:', data)
+            
+            // Si la partida fue eliminada, no hacer nada (el usuario ya no está en la partida)
+            if (data.game_deleted) {
+                return
+            }
+
+            // Recargar información completa de la partida
+            if (currentGameId) {
+                await loadGameInfo(currentGameId)
+                updateLobbyInfo()
+                renderCards()
+            }
+        })
+
+        // Escuchar evento cuando un jugador abandona
+        lobbyChannel.bind('player.left', async (data: any) => {
+            console.log('Jugador abandonó:', data)
+            
+            // Si la partida fue eliminada, redirigir al usuario
+            if (data.game_deleted) {
+                alert('La partida ha sido eliminada por no tener jugadores')
+                window.location.href = routes.findGame
+                return
+            }
+
+            // Recargar información completa de la partida
+            if (currentGameId) {
+                await loadGameInfo(currentGameId)
+                updateLobbyInfo()
+                renderCards()
+            }
+        })
+
+        // Escuchar evento cuando se actualiza la partida (nombre, max_players, etc.)
+        lobbyChannel.bind('game.updated', async (data: any) => {
+            console.log('Partida actualizada:', data)
+            
+            // Actualizar los datos de la partida con la información recibida
+            if (data.game && currentGameId === data.game_id) {
+                gameData = {
+                    ...gameData,
+                    name: data.game.name ?? gameData?.name,
+                    max_players: data.game.max_players ?? gameData?.max_players,
+                    current_players: data.game.current_players ?? gameData?.current_players,
+                    status: data.game.status ?? gameData?.status,
+                    players: data.game.players ?? gameData?.players
+                }
+                
+                // Actualizar la UI
+                updateLobbyInfo()
+                renderCards()
+            }
+        })
+
+        // Escuchar evento de cambio de fase del juego
+        lobbyChannel.bind('game.phase.changed', (data: any) => {
+            console.log('Fase del juego cambiada:', data)
+            
+            if (data.game_id === currentGameId) {
+                // Actualizar estado de votación
+                if (data.voting_in_progress !== undefined) {
+                    votingInProgress = data.voting_in_progress
+                }
+                
+                // Manejar el cambio de fase
+                handlePhaseChange(data.phase, data.phase_message || `Fase: ${data.phase}`, data.duration || 0)
+            }
+        })
+
+        // Escuchar evento de voto recibido
+        lobbyChannel.bind('game.vote.received', (data: any) => {
+            console.log('Voto recibido:', data)
+            
+            if (data.game_id === currentGameId && data.votes) {
+                processVotes(data.votes)
+            }
+        })
+
+        // Eventos de conexión
+        pusher.connection.bind('connected', () => {
+            console.info('✅ Conectado a actualizaciones del lobby')
+        })
+
+        pusher.connection.bind('error', (err: any) => {
+            console.error('⚠️ Error en conexión del lobby:', err)
+        })
+
+        lobbyUpdatesInitialized = true
+        console.info('✅ Actualizaciones del lobby inicializadas')
+    } catch (error) {
+        console.error('Error al inicializar actualizaciones del lobby:', error)
+    }
+}
+
+// Init
 const init = async () => {
     // Verificar autenticación
     if (!requireAuth()) {
@@ -931,9 +1156,15 @@ const init = async () => {
 
     // Cargar información de la partida
     await loadGameInfo(gameId)
-    
+
     // Verificar si la partida está en curso
     checkGameMode()
+
+    // Inicializar el chat
+    await initChat(gameId)
+
+    // Inicializar actualizaciones del lobby
+    await initLobbyUpdates(gameId)
 }
 
 init()

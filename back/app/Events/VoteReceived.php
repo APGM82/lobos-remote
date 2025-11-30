@@ -2,57 +2,47 @@
 
 namespace App\Events;
 
+use App\Models\Game;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-/**
- * Evento que se dispara cuando se recibe un voto
- */
 class VoteReceived implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public int $gameId;
-    public string $votingType;
-    public int $voterId;
-    public int $targetId;
-    public array $currentVotes; // Conteo actual de votos por jugador
+    public $game;
+    public $voterId;
+    public $targetId;
+    public $votes;
 
-    public function __construct(
-        int $gameId,
-        string $votingType,
-        int $voterId,
-        int $targetId,
-        array $currentVotes
-    ) {
-        $this->gameId = $gameId;
-        $this->votingType = $votingType;
+    public function __construct(Game $game, int $voterId, int $targetId, array $votes)
+    {
+        $this->game = $game;
         $this->voterId = $voterId;
         $this->targetId = $targetId;
-        $this->currentVotes = $currentVotes;
+        $this->votes = $votes;
     }
 
-    public function broadcastOn(): Channel
+    public function broadcastOn()
     {
-        return new Channel('game.' . $this->gameId);
+        return new Channel("game.lobby.{$this->game->id}");
     }
 
     public function broadcastAs(): string
     {
-        return 'vote.received';
+        return 'game.vote.received';
     }
 
     public function broadcastWith(): array
     {
         return [
-            'votingType' => $this->votingType,
-            'voterId' => $this->voterId,
-            'targetId' => $this->targetId,
-            'currentVotes' => $this->currentVotes,
-            'timestamp' => now()->toISOString(),
+            'game_id' => $this->game->id,
+            'voter_id' => $this->voterId,
+            'target_id' => $this->targetId,
+            'votes' => $this->votes,
         ];
     }
 }

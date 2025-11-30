@@ -18,21 +18,6 @@
 
     <main class="lobby-main">
         <div class="lobby-container">
-            <!-- Barra de estado del juego (visible cuando empiece la partida) -->
-            <div class="game-status-bar" id="gameStatusBar" style="display: none;">
-                <div class="status-item">
-                    <span class="status-label">Fase:</span>
-                    <span id="phaseDisplay" class="status-value">⏳ Esperando</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">Tiempo:</span>
-                    <span id="timerDisplay" class="status-value timer">--:--</span>
-                </div>
-                <div class="status-item">
-                    <span id="connectionStatus" class="status-offline">🔴 Offline</span>
-                </div>
-            </div>
-
             <!-- Área de Lobby (Izquierda) -->
             <div class="lobby-area">
                 <h1 id="lobbyTitle" class="lobby-title">Cargando...</h1>
@@ -49,7 +34,13 @@
                     <span class="chat-status-indicator"></span>
                 </div>
                 <div id="chatMessages" class="chat-messages">
-                    <p class="chat-placeholder">Esperando inicio del juego...</p>
+                    <!-- Mensajes de ejemplo estáticos -->
+                    <div class="chat-message">user1: el lobo ha sido user2</div>
+                    <div class="chat-message">user2: el lobo ha sido user3</div>
+                    <div class="chat-message">user3: el lobo ha sido user4</div>
+                    <div class="chat-message">user1: el lobo ha sido user2</div>
+                    <div class="chat-message">user2: el lobo ha sido user3</div>
+                    <div class="chat-message">user3: el lobo ha sido user4</div>
                 </div>
                 <div class="chat-input-container">
                     <input type="text" id="chatInput" class="chat-input" placeholder="escribe aquí tu acusación....">

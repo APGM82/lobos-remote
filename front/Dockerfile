@@ -3,9 +3,13 @@ FROM node:20
 
 WORKDIR /app
 
-# Copiar package.json y package-lock.json para instalar deps
-COPY package*.json ./
-RUN npm install
+# Copiar package.json (sin package-lock para evitar problemas de plataforma)
+COPY package.json ./
+
+# Limpiar e instalar dependencias, forzando rollup para linux
+RUN rm -rf node_modules package-lock.json && \
+    npm install && \
+    npm install @rollup/rollup-linux-x64-gnu --save-optional
 
 # Copiar entrypoint y convertir line endings
 COPY entrypoint.sh /entrypoint.sh

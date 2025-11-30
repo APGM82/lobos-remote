@@ -145,20 +145,35 @@ class GameSeeder extends Seeder
                 // Seleccionar un usuario aleatorio como host (excluyendo admin)
                 $host = $usersWithoutAdmin->random();
 
-                // Generar código único
-                $codeJoinTo = strtoupper(Str::random(6));
-                while (Game::where('code_join_to', $codeJoinTo)->exists()) {
+                // Buscar si ya existe una partida con el mismo nombre y estado
+                $existingGame = Game::where('name', $gameData['name'])
+                    ->where('code_status', $gameData['status']->id)
+                    ->first();
+
+                // Si existe, usar su código; si no, generar uno nuevo
+                if ($existingGame) {
+                    $codeJoinTo = $existingGame->code_join_to;
+                } else {
+                    // Generar código único solo si no existe la partida
                     $codeJoinTo = strtoupper(Str::random(6));
+                    while (Game::where('code_join_to', $codeJoinTo)->exists()) {
+                        $codeJoinTo = strtoupper(Str::random(6));
+                    }
                 }
 
-                // Crear la partida
-                $game = Game::create([
-                    'id_user_host' => $host->id,
-                    'name' => $gameData['name'],
-                    'max_players' => $gameData['max_players'],
-                    'code_join_to' => $codeJoinTo,
-                    'code_status' => $gameData['status']->id,
-                ]);
+                // Crear o actualizar la partida usando updateOrCreate
+                // Usamos nombre + estado como identificador único para permitir partidas con mismo nombre pero diferente estado
+                $game = Game::updateOrCreate(
+                    [
+                        'name' => $gameData['name'],
+                        'code_status' => $gameData['status']->id
+                    ], // Condición de búsqueda (nombre + estado)
+                    [ // Valores a actualizar/crear
+                        'id_user_host' => $host->id,
+                        'max_players' => $gameData['max_players'],
+                        'code_join_to' => $codeJoinTo,
+                    ]
+                );
 
                 // Agregar jugadores a la partida
                 $playersToAdd = min($gameData['players_count'], $usersWithoutAdmin->count());

@@ -2,59 +2,50 @@
 
 namespace App\Events;
 
+use App\Models\Game;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-/**
- * Evento que se dispara cuando cambia la fase del juego
- */
 class GamePhaseChanged implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public int $gameId;
-    public string $phase;
-    public int $turn;
-    public int $duration;
-    public array $data;
+    public $game;
+    public $phase;
+    public $phaseMessage;
+    public $duration;
+    public $votingInProgress;
 
-    /**
-     * @param int $gameId ID de la partida
-     * @param string $phase Fase actual (cupido, night, wolves, witch, seer, protector, thief, day, voting)
-     * @param int $turn Número de turno
-     * @param int $duration Duración en segundos
-     * @param array $data Datos adicionales de la fase
-     */
-    public function __construct(int $gameId, string $phase, int $turn, int $duration, array $data = [])
+    public function __construct(Game $game, string $phase, string $phaseMessage = '', int $duration = 0, bool $votingInProgress = false)
     {
-        $this->gameId = $gameId;
+        $this->game = $game;
         $this->phase = $phase;
-        $this->turn = $turn;
+        $this->phaseMessage = $phaseMessage;
         $this->duration = $duration;
-        $this->data = $data;
+        $this->votingInProgress = $votingInProgress;
     }
 
-    public function broadcastOn(): Channel
+    public function broadcastOn()
     {
-        return new Channel('game.' . $this->gameId);
+        return new Channel("game.lobby.{$this->game->id}");
     }
 
     public function broadcastAs(): string
     {
-        return 'phase.changed';
+        return 'game.phase.changed';
     }
 
     public function broadcastWith(): array
     {
         return [
+            'game_id' => $this->game->id,
             'phase' => $this->phase,
-            'turn' => $this->turn,
+            'phase_message' => $this->phaseMessage,
             'duration' => $this->duration,
-            'data' => $this->data,
-            'timestamp' => now()->toISOString(),
+            'voting_in_progress' => $this->votingInProgress,
         ];
     }
 }
