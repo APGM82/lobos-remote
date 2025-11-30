@@ -1,6 +1,12 @@
 import { getGameInfo, leaveGame, startGame, updateGameDetails } from './CrudLobby.ts'
 import { requireAuth, getUser, getToken } from '../auth.ts'
 import routes from '../routes.ts'
+import Pusher from 'pusher-js';
+import { 
+    loadConfig,
+    getReverbConfig,
+    getApiConfig
+} from '../chatWebsocket/connection/config';
 
 let gameData: any = null
 let detachCardsResize: (() => void) | null = null
@@ -423,7 +429,7 @@ const bindEditButton = (gameId: number) => {
                 closeModal()
                 updateLobbyInfo()
                 renderCards()
-                alert(data.message || 'Partida actualizada correctamente')
+                // La actualización se refleja automáticamente vía websocket, no se muestra alerta
             } else {
                 alert(data.message || 'Error al actualizar la partida')
             }
@@ -610,10 +616,14 @@ const renderCards = () => {
         }
     })
 
+    // Obtener el ID del host
+    const hostId = gameData.host?.id ?? null
+
     // Renderizar cartas hasta max_players
     for (let i = 0; i < maxPlayers; i++) {
         const player = playersByPosition[i]
         const isEnabled = !!player
+        const isHost = isEnabled && player && hostId !== null && player.id === hostId
 
         const cardWrapper = document.createElement('div')
         cardWrapper.classList.add('card-wrapper')
@@ -622,6 +632,9 @@ const renderCards = () => {
         cardDiamond.classList.add('card-diamond')
         if (!isEnabled) {
             cardDiamond.classList.add('disabled')
+        }
+        if (isHost) {
+            cardDiamond.classList.add('host-card')
         }
 
         const cardContent = document.createElement('div')
@@ -633,6 +646,15 @@ const renderCards = () => {
         cardImage.src = '../public/logo.png'
         cardImage.alt = isEnabled && player ? player.nickname : 'Jugador no asignado'
         cardContent.appendChild(cardImage)
+
+        // Corona para el host
+        if (isHost) {
+            const crownIcon = document.createElement('div')
+            crownIcon.classList.add('crown-icon')
+            crownIcon.textContent = '👑'
+            crownIcon.setAttribute('title', 'Host')
+            cardContent.appendChild(crownIcon)
+        }
 
         // Nickname del usuario (solo si está habilitado)
         if (isEnabled && player && player.nickname) {
@@ -655,6 +677,306 @@ const renderCards = () => {
 
     setupCardsLayout(maxPlayers)
     updateStartButtonState()
+}
+
+// ======== Variables para el chat ========
+let pusher: Pusher | null = null
+let chatChannels: any[] = []
+let chatInitialized = false
+
+// ======== Variables para actualizaciones del lobby ========
+let lobbyChannel: any = null
+let lobbyUpdatesInitialized = false
+
+/**
+ * Renderiza un mensaje en el chat
+ */
+const renderChatMessage = (data: any, container: HTMLElement) => {
+    const messageDiv = document.createElement('div')
+    messageDiv.classList.add('chat-message')
+
+    const userName = data.user_name || data.user_nickname || 'Usuario'
+
+    let typePrefix = ''
+    if (data.type === 'private') {
+        typePrefix = '🔒 '
+    } else if (data.type === 'group') {
+        typePrefix = '👥 '
+    }
+
+    messageDiv.textContent = `${typePrefix}${userName}: ${data.message}`
+    container.appendChild(messageDiv)
+    container.scrollTop = container.scrollHeight
+}
+
+/**
+ * Carga el historial del chat
+ */
+const loadChatHistory = async (gameId: number, container: HTMLElement) => {
+    const { loadChatHistory: loadHistory } = await import('../chatWebsocket/chatArchive')
+    
+    const messages = await loadHistory(gameId)
+    
+    if (messages && messages.length > 0) {
+        // Limpiar mensajes existentes
+        container.innerHTML = ''
+        
+        // Renderizar mensajes del historial
+        messages.forEach((msg) => {
+            renderChatMessage(msg, container)
+        })
+    }
+}
+
+/**
+ * Inicializa el chat en el lobby
+ */
+const initChat = async (gameId: number) => {
+    if (chatInitialized) return
+
+    const chatMessagesContainer = document.getElementById('chatMessages')
+    const chatInput = document.getElementById('chatInput') as HTMLInputElement
+    const sendMessageBtn = document.getElementById('sendMessageBtn') as HTMLButtonElement
+
+    if (!chatMessagesContainer || !chatInput || !sendMessageBtn) {
+        console.warn('Elementos del chat no encontrados')
+        return
+    }
+
+    try {
+        // Cargar configuración
+        await loadConfig()
+        const reverbConfig = getReverbConfig()
+        const apiConfig = getApiConfig()
+
+        // Determinar el host WebSocket
+        const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'localhost'
+            : reverbConfig.host === '127.0.0.1'
+            ? 'localhost'
+            : reverbConfig.host
+
+        const token = getToken()
+        if (!token) {
+            console.error('No hay token de autenticación para el chat')
+            return
+        }
+
+        // Configurar Pusher
+        pusher = new Pusher(reverbConfig.appKey, {
+            wsHost: wsHost,
+            wsPort: reverbConfig.port,
+            forceTLS: false,
+            enabledTransports: ['ws'],
+            cluster: reverbConfig.cluster,
+            disableStats: true,
+            authEndpoint: `http://${apiConfig.host}:${apiConfig.port}/broadcasting/auth`,
+            auth: {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            }
+        })
+
+        // Suscribirse a canales
+        const publicChannel = pusher.subscribe(`chat.game.${gameId}.public`)
+        chatChannels.push(publicChannel)
+
+        if (currentUserId) {
+            const privateChannel = pusher.subscribe(`private-chat.game.${gameId}.private.${currentUserId}`)
+            chatChannels.push(privateChannel)
+            
+            const groupChannel = pusher.subscribe(`private-chat.game.${gameId}.group.${currentUserId}`)
+            chatChannels.push(groupChannel)
+        }
+
+        // Eventos de conexión
+        pusher.connection.bind('connected', () => {
+            console.info('✅ Chat conectado a Reverb')
+            const statusIndicator = document.querySelector('.chat-status-indicator')
+            if (statusIndicator) {
+                statusIndicator.classList.add('online')
+            }
+        })
+
+        pusher.connection.bind('error', (err: any) => {
+            console.error('⚠️ Error en conexión del chat:', err)
+            const statusIndicator = document.querySelector('.chat-status-indicator')
+            if (statusIndicator) {
+                statusIndicator.classList.remove('online')
+            }
+        })
+
+        // Handler para mensajes públicos
+        publicChannel.bind('message.sent', (data: any) => {
+            if (data.type === 'public' && data.game_id === gameId) {
+                renderChatMessage(data, chatMessagesContainer)
+            }
+        })
+
+        // Handler para mensajes privados
+        if (currentUserId && chatChannels.length > 1) {
+            const privateChannel = chatChannels.find(c => c.name && c.name.includes(`private.${currentUserId}`))
+            if (privateChannel) {
+                privateChannel.bind('message.sent', (data: any) => {
+                    if (data.type === 'private' && 
+                        data.game_id === gameId &&
+                        (data.user_id === currentUserId || data.recipient_id === currentUserId)) {
+                        renderChatMessage(data, chatMessagesContainer)
+                    }
+                })
+            }
+
+            // Handler para mensajes de grupo
+            const groupChannel = chatChannels.find(c => c.name && c.name.includes(`group.${currentUserId}`))
+            if (groupChannel) {
+                groupChannel.bind('message.sent', (data: any) => {
+                    if (data.type === 'group' && 
+                        data.game_id === gameId &&
+                        (data.user_id === currentUserId || 
+                         (data.recipient_ids && data.recipient_ids.includes(currentUserId)))) {
+                        renderChatMessage(data, chatMessagesContainer)
+                    }
+                })
+            }
+        }
+
+        // Cargar historial
+        await loadChatHistory(gameId, chatMessagesContainer)
+
+        // Event listener para enviar mensaje
+        const sendMessage = async () => {
+            const message = chatInput.value.trim()
+            if (!message) return
+
+            const apiConfig = getApiConfig()
+            const url = `http://${apiConfig.host}:${apiConfig.port}/api/chat/${gameId}/send`
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                })
+
+                if (response.ok) {
+                    chatInput.value = ''
+                } else {
+                    const error = await response.json()
+                    alert(error.message || 'Error al enviar el mensaje')
+                }
+            } catch (error) {
+                console.error('Error al enviar mensaje:', error)
+                alert('Error de conexión al enviar el mensaje')
+            }
+        }
+
+        sendMessageBtn.addEventListener('click', sendMessage)
+        chatInput.addEventListener('keypress', (e: KeyboardEvent) => {
+            if (e.key === 'Enter') {
+                sendMessage()
+            }
+        })
+
+        chatInitialized = true
+    } catch (error) {
+        console.error('Error al inicializar el chat:', error)
+    }
+}
+
+/**
+ * Inicializa las actualizaciones del lobby mediante WebSocket
+ */
+const initLobbyUpdates = async (gameId: number) => {
+    if (lobbyUpdatesInitialized) return
+
+    try {
+        // Si ya tenemos una instancia de Pusher del chat, reutilizarla
+        // Si no existe, el chat la creará primero
+        if (!pusher) {
+            console.warn('Pusher no inicializado. El chat debe inicializarse primero.')
+            return
+        }
+
+        // Suscribirse al canal del lobby
+        lobbyChannel = pusher.subscribe(`game.lobby.${gameId}`)
+
+        // Escuchar evento cuando un jugador se une
+        lobbyChannel.bind('player.joined', async (data: any) => {
+            console.log('Jugador se unió:', data)
+            
+            // Si la partida fue eliminada, no hacer nada (el usuario ya no está en la partida)
+            if (data.game_deleted) {
+                return
+            }
+
+            // Recargar información completa de la partida
+            if (currentGameId) {
+                await loadGameInfo(currentGameId)
+                updateLobbyInfo()
+                renderCards()
+            }
+        })
+
+        // Escuchar evento cuando un jugador abandona
+        lobbyChannel.bind('player.left', async (data: any) => {
+            console.log('Jugador abandonó:', data)
+            
+            // Si la partida fue eliminada, redirigir al usuario
+            if (data.game_deleted) {
+                alert('La partida ha sido eliminada por no tener jugadores')
+                window.location.href = routes.findGame
+                return
+            }
+
+            // Recargar información completa de la partida
+            if (currentGameId) {
+                await loadGameInfo(currentGameId)
+                updateLobbyInfo()
+                renderCards()
+            }
+        })
+
+        // Escuchar evento cuando se actualiza la partida (nombre, max_players, etc.)
+        lobbyChannel.bind('game.updated', async (data: any) => {
+            console.log('Partida actualizada:', data)
+            
+            // Actualizar los datos de la partida con la información recibida
+            if (data.game && currentGameId === data.game_id) {
+                gameData = {
+                    ...gameData,
+                    name: data.game.name ?? gameData?.name,
+                    max_players: data.game.max_players ?? gameData?.max_players,
+                    current_players: data.game.current_players ?? gameData?.current_players,
+                    status: data.game.status ?? gameData?.status,
+                    players: data.game.players ?? gameData?.players
+                }
+                
+                // Actualizar la UI
+                updateLobbyInfo()
+                renderCards()
+            }
+        })
+
+        // Eventos de conexión
+        pusher.connection.bind('connected', () => {
+            console.info('✅ Conectado a actualizaciones del lobby')
+        })
+
+        pusher.connection.bind('error', (err: any) => {
+            console.error('⚠️ Error en conexión del lobby:', err)
+        })
+
+        lobbyUpdatesInitialized = true
+        console.info('✅ Actualizaciones del lobby inicializadas')
+    } catch (error) {
+        console.error('Error al inicializar actualizaciones del lobby:', error)
+    }
 }
 
 /**
@@ -683,6 +1005,12 @@ const init = async () => {
 
     // Cargar información de la partida
     await loadGameInfo(gameId)
+
+    // Inicializar el chat
+    await initChat(gameId)
+
+    // Inicializar actualizaciones del lobby
+    await initLobbyUpdates(gameId)
 }
 
 init()

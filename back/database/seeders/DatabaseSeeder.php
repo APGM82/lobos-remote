@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
         // Crear partidas de ejemplo
         $this->call(GameSeeder::class);
 
-
+        // Crear configuración de Vite
+        $this->call(ViteConfigSeeder::class);
     }
 }
