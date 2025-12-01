@@ -4,6 +4,10 @@
 echo "Instalando dependencias de Composer..."
 composer install --no-interaction --optimize-autoloader
 
+# Regenerar autoloader para asegurar que esté sincronizado con las dependencias instaladas
+echo "Regenerando autoloader..."
+composer dump-autoload --optimize
+
 # Copiar .env.example a .env si no existe .env
 if [ ! -f ".env" ]; then
   if [ -f ".env.example" ]; then
