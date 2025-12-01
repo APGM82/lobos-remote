@@ -875,11 +875,7 @@ class GameController extends Controller
 
             $currentPlayers = $game->users->count();
             if ($currentPlayers < $game->max_players) {
-                $remaining = $game->max_players - $currentPlayers;
-                return response()->json([
-                    'success' => false,
-                    'message' => "No se puede iniciar la partida. Faltan {$remaining} jugador(es)."
-                ], 422);
+                $this->fillBots($id);
             }
 
             $game->code_status = $statusInProgress->id;
@@ -910,10 +906,7 @@ class GameController extends Controller
                             'id' => $player->id,
                             'name' => $player->name,
                             'nickname' => $player->nickname,
-                            'character' => $player->characterInGame()
-                                ->wherePivot('id_game', $game->id)
-                                ->first()
-                                ?->name,
+                            'character' => $player->pivot->id_character
                         ];
                     }),
                 ],
@@ -1131,6 +1124,38 @@ class GameController extends Controller
             ], 500);
         }
     }
+
+    public function fillBots($idGame)
+    {
+    // Obtener el juego (un solo registro)
+    $game = Game::findOrFail($idGame); // en vez de Game::get()->where(...)
+
+    // Jugadores humanos ya en la partida
+    $players = GameLobby::where('id_game', $idGame)->get();
+    $numPlayers = $players->count();
+
+    // Si ya está llena, no hacemos nada
+    if ($numPlayers >= $game->max_players) {
+        return;
+    }
+
+    // Calcular cuántos bots faltan
+    $botsNeeded = $game->max_players - $numPlayers;
+
+    // Obtener bots disponibles (limitar al número necesario)
+    $bots = User::where('isBot', 1)
+        ->take($botsNeeded)
+        ->get();
+
+    // Insertar en GameLobby (o usar relación many-to-many si la tienes)
+    foreach ($bots as $bot) {
+        GameLobby::create([
+            'id_game'  => $idGame,
+            'id_user'  => $bot->id,
+            'id_character' => 1
+        ]);
+    }
+}
 
 }
 
