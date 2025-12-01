@@ -1,10 +1,10 @@
 #!/bin/sh
 
 # Instalar dependencias de npm si no existen
-if [ ! -d "node_modules" ]; then
+
   echo "Instalando dependencias de npm..."
   npm install
-fi
+
 # La configuración ahora se obtiene exclusivamente desde la API del backend
 echo "Configuración: Las variables se cargarán desde la API del backend (/api/vite-config)"
 
