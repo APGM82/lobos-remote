@@ -9,7 +9,6 @@ import {
 } from '../chatWebsocket/connection/config';
 
 let gameData: any = null
-let detachCardsResize: (() => void) | null = null
 let currentGameId: number | null = null
 let currentUserId: number | null = null
 let startButton: HTMLButtonElement | null = null
@@ -21,6 +20,17 @@ let editMaxPlayersInput: HTMLInputElement | null = null
 let confirmEditButton: HTMLButtonElement | null = null
 let cancelEditButton: HTMLButtonElement | null = null
 let isUpdatingGame = false
+
+// Variables del juego
+let gameMode: 'lobby' | 'playing' = 'lobby'
+let hasVoted = false
+let votingInProgress = false
+let votingType: 'wolves' | 'village' | null = null
+let eligibleVoters: number[] = []
+let eligibleTargets: number[] = []
+let votes: Map<number, number[]> = new Map()
+let currentPhase: string = 'lobby'
+let timerInterval: number | null = null
 
 const resolveCurrentUserId = async (): Promise<number | null> => {
     const storedUser = getUser()
@@ -62,19 +72,14 @@ const resolveCurrentUserId = async (): Promise<number | null> => {
     return null
 }
 
-/**
- * Obtiene el ID de la partida desde la URL
- * @returns ID de la partida o null si no se encuentra
- */
+// Obtiene el ID de la partida desde la URL
 const getGameIdFromUrl = (): number | null => {
     const urlParams = new URLSearchParams(window.location.search)
     const gameId = urlParams.get('gameId')
     return gameId ? parseInt(gameId, 10) : null
 }
 
-/**
- * Carga la información de la partida desde el backend
- */
+// Carga la info de la partida
 const loadGameInfo = async (gameId: number) => {
     try {
         const response = await getGameInfo(gameId)
@@ -109,9 +114,7 @@ const loadGameInfo = async (gameId: number) => {
     }
 }
 
-/**
- * Actualiza la información del lobby (título e instrucciones)
- */
+// Actualiza titulo e instrucciones del lobby
 const updateLobbyInfo = () => {
     if (!gameData) return
 
@@ -246,70 +249,6 @@ const updateStartButtonState = () => {
     } else {
         startButton.removeAttribute('title')
     }
-}
-
-const adjustCardsLayout = (totalCards: number) => {
-    const cardsContainer = document.getElementById('cardsContainer') as HTMLElement | null
-    if (!cardsContainer || totalCards <= 0) {
-        return
-    }
-
-    const styles = window.getComputedStyle(cardsContainer)
-    const paddingX = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight)
-    const paddingY = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom)
-    const gapValue = styles.getPropertyValue('--card-gap')
-    const gap = gapValue ? parseFloat(gapValue) : 16
-
-    const availableWidth = cardsContainer.clientWidth - paddingX
-    const availableHeight = cardsContainer.clientHeight - paddingY
-
-    if (availableWidth <= 0 || availableHeight <= 0) {
-        return
-    }
-
-    let columns = Math.ceil(Math.sqrt(totalCards * (availableWidth / availableHeight)))
-    columns = Math.max(1, Math.min(columns, totalCards))
-    let rows = Math.ceil(totalCards / columns)
-
-    const calcCardSize = () => {
-        const widthSpace = availableWidth - gap * (columns - 1)
-        const heightSpace = availableHeight - gap * (rows - 1)
-
-        if (widthSpace <= 0 || heightSpace <= 0) {
-            return 0
-        }
-
-        return Math.min(widthSpace / columns, heightSpace / rows)
-    }
-
-    let cardSize = calcCardSize()
-    const MAX_CARD_SIZE = 130
-    const MIN_CARD_SIZE = 60
-
-    while (cardSize <= MIN_CARD_SIZE && columns < totalCards) {
-        columns += 1
-        rows = Math.ceil(totalCards / columns)
-        cardSize = calcCardSize()
-    }
-
-    cardSize = Math.min(cardSize, MAX_CARD_SIZE)
-
-    cardsContainer.style.gridTemplateColumns = `repeat(${columns}, ${cardSize}px)`
-    cardsContainer.style.gridAutoRows = `${cardSize}px`
-}
-
-const setupCardsLayout = (totalCards: number) => {
-    if (detachCardsResize) {
-        detachCardsResize()
-        detachCardsResize = null
-    }
-
-    const update = () => adjustCardsLayout(totalCards)
-
-    window.addEventListener('resize', update)
-    detachCardsResize = () => window.removeEventListener('resize', update)
-
-    requestAnimationFrame(update)
 }
 
 const bindEditButton = (gameId: number) => {
@@ -589,9 +528,7 @@ const bindAbandonButton = (gameId: number) => {
     abandonBtn.addEventListener('click', handleClick)
 }
 
-/**
- * Renderiza las cartas de votación dinámicamente
- */
+// Renderiza las cartas de jugadores
 const renderCards = () => {
     const cardsContainer = document.getElementById('cardsContainer')
     if (!cardsContainer || !gameData) return
@@ -606,7 +543,6 @@ const renderCards = () => {
     }
     
     // Crear un array de jugadores indexado por posición
-    // Los jugadores vienen como array de objetos, los mapeamos a posiciones
     const playersByPosition: (any | null)[] = new Array(maxPlayers).fill(null)
     
     // Asignar jugadores a las primeras posiciones disponibles
@@ -616,8 +552,9 @@ const renderCards = () => {
         }
     })
 
-    // Obtener el ID del host
-    const hostId = gameData.host?.id ?? null
+    // Verificar si la partida está en curso
+    const statusName = getStatusName(gameData.status).toLowerCase()
+    const isGameInProgress = statusName === 'en_progreso' || statusName === 'en_curso'
 
     // Renderizar cartas hasta max_players
     for (let i = 0; i < maxPlayers; i++) {
@@ -625,58 +562,270 @@ const renderCards = () => {
         const isEnabled = !!player
         const isHost = isEnabled && player && hostId !== null && player.id === hostId
 
-        const cardWrapper = document.createElement('div')
-        cardWrapper.classList.add('card-wrapper')
-
-        const cardDiamond = document.createElement('div')
-        cardDiamond.classList.add('card-diamond')
+        // Crear tarjeta rectangular
+        const playerCard = document.createElement('div')
+        playerCard.classList.add('player-card')
+        
         if (!isEnabled) {
-            cardDiamond.classList.add('disabled')
+            playerCard.classList.add('disabled')
         }
         if (isHost) {
             cardDiamond.classList.add('host-card')
         }
 
-        const cardContent = document.createElement('div')
-        cardContent.classList.add('card-content')
-
-        // Imagen del logo (siempre visible)
-        const cardImage = document.createElement('img')
-        cardImage.classList.add('card-image')
-        cardImage.src = '../public/logo.png'
-        cardImage.alt = isEnabled && player ? player.nickname : 'Jugador no asignado'
-        cardContent.appendChild(cardImage)
-
-        // Corona para el host
-        if (isHost) {
-            const crownIcon = document.createElement('div')
-            crownIcon.classList.add('crown-icon')
-            crownIcon.textContent = '👑'
-            crownIcon.setAttribute('title', 'Host')
-            cardContent.appendChild(crownIcon)
+        // Si la partida está en curso y hay votación, añadir clase votable
+        if (isEnabled && isGameInProgress && votingInProgress && player) {
+            const isAlive = player.is_alive !== false
+            const isNotSelf = player.id !== currentUserId
+            
+            // Verificar si el usuario actual puede votar y si el jugador es un objetivo válido
+            const canUserVote = eligibleVoters.length === 0 || eligibleVoters.includes(currentUserId!)
+            const isValidTarget = eligibleTargets.length === 0 || eligibleTargets.includes(player.id)
+            
+            if (isAlive && isNotSelf && !hasVoted && canUserVote && isValidTarget) {
+                playerCard.classList.add('votable')
+                playerCard.addEventListener('click', () => handleVoteClick(player.id, player.nickname))
+            }
+            
+            if (!isAlive) {
+                playerCard.classList.add('dead')
+            }
         }
 
-        // Nickname del usuario (solo si está habilitado)
-        if (isEnabled && player && player.nickname) {
-            const cardNickname = document.createElement('div')
-            cardNickname.classList.add('card-nickname')
-            cardNickname.textContent = player.nickname
-            cardContent.appendChild(cardNickname)
+        // Avatar del jugador
+        const avatar = document.createElement('div')
+        avatar.classList.add('player-avatar')
+        
+        if (isEnabled && player) {
+            if (player.profile_image) {
+                const avatarImg = document.createElement('img')
+                avatarImg.src = player.profile_image
+                avatarImg.alt = player.nickname
+                avatar.appendChild(avatarImg)
+            } else {
+                avatar.textContent = player.nickname ? player.nickname.charAt(0).toUpperCase() : '?'
+            }
         } else {
-            // Mostrar etiqueta uX si no hay jugador
-            const cardLabel = document.createElement('div')
-            cardLabel.classList.add('card-label')
-            cardLabel.textContent = `u${i + 1}`
-            cardContent.appendChild(cardLabel)
+            avatar.textContent = '?'
+        }
+        playerCard.appendChild(avatar)
+
+        // Nickname del usuario
+        if (isEnabled && player && player.nickname) {
+            const nick = document.createElement('div')
+            nick.classList.add('player-nick')
+            nick.textContent = player.nickname
+            playerCard.appendChild(nick)
+        } else {
+            const label = document.createElement('div')
+            label.classList.add('player-label')
+            label.textContent = `Vacante ${i + 1}`
+            playerCard.appendChild(label)
         }
 
-        cardDiamond.appendChild(cardContent)
-        cardWrapper.appendChild(cardDiamond)
-        cardsContainer.appendChild(cardWrapper)
+        // Mostrar votos si hay votación en curso
+        if (isGameInProgress && votingInProgress && isEnabled && player) {
+            const playerVotes = votes.get(player.id)
+            const votesDiv = document.createElement('div')
+            votesDiv.classList.add('player-votes')
+            votesDiv.id = `votes-${player.id}`
+            if (playerVotes && playerVotes.length > 0) {
+                votesDiv.textContent = `🗳️ ${playerVotes.length}`
+            }
+            playerCard.appendChild(votesDiv)
+        }
+
+        // Mostrar estado si está muerto
+        if (isEnabled && player && player.is_alive === false) {
+            const statusDiv = document.createElement('div')
+            statusDiv.classList.add('player-status')
+            statusDiv.textContent = '💀 Muerto'
+            playerCard.appendChild(statusDiv)
+        }
+
+        cardsContainer.appendChild(playerCard)
     }
 
-    setupCardsLayout(maxPlayers)
     updateStartButtonState()
+}
+
+// Click en votar
+const handleVoteClick = async (targetId: number, targetNickname: string) => {
+    if (hasVoted || !votingInProgress || !currentGameId) {
+        return
+    }
+
+    const confirmed = confirm(`¿Votar por ${targetNickname}?`)
+    if (!confirmed) return
+
+    hasVoted = true
+    
+    try {
+        const token = getToken()
+        const response = await fetch(`${routes.gameplayUrl}/${currentGameId}/vote`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ target_id: targetId })
+        })
+
+        if (response.ok) {
+            await response.json()
+            addGameMessage(`Has votado por ${targetNickname}`, 'action')
+            
+            if (!votes.has(targetId)) {
+                votes.set(targetId, [])
+            }
+            votes.get(targetId)?.push(currentUserId!)
+            renderCards()
+        } else {
+            hasVoted = false
+            addGameMessage('Error al enviar el voto', 'system')
+        }
+    } catch (error) {
+        hasVoted = false
+        console.error('Error al votar:', error)
+        addGameMessage('Error de conexión al votar', 'system')
+    }
+}
+
+// Añade mensaje al chat
+const addGameMessage = (message: string, type: 'system' | 'action' | 'chat' | 'wolves_chat' = 'system') => {
+    const chatMessages = document.getElementById('chatMessages')
+    if (!chatMessages) return
+
+    const placeholder = chatMessages.querySelector('.chat-placeholder')
+    if (placeholder) {
+        placeholder.remove()
+    }
+
+    const messageDiv = document.createElement('div')
+    messageDiv.classList.add('game-message', `message-${type}`)
+    
+    const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    messageDiv.innerHTML = `<span class="msg-time">[${time}]</span> ${message}`
+    
+    chatMessages.appendChild(messageDiv)
+    chatMessages.scrollTop = chatMessages.scrollHeight
+}
+
+// Actualiza la barra de estado
+const updateGameStatusBar = () => {
+    const phaseDisplay = document.getElementById('phaseDisplay')
+    const connectionStatus = document.getElementById('connectionStatus')
+    const gameStatusBar = document.querySelector('.game-status-bar') as HTMLElement
+
+    const statusName = getStatusName(gameData?.status).toLowerCase()
+    const isGameInProgress = statusName === 'en_progreso' || statusName === 'en_curso'
+
+    if (gameStatusBar) {
+        gameStatusBar.style.display = isGameInProgress ? 'flex' : 'none'
+    }
+
+    if (!isGameInProgress) return
+
+    if (phaseDisplay) {
+        const phaseNames: Record<string, string> = {
+            'lobby': '🏠 Lobby',
+            'cupido': '💘 Cupido',
+            'thief': '🦝 Ladrón',
+            'protector': '🛡️ Protector',
+            'seer': '🔮 Vidente',
+            'wolves': '🐺 Lobos',
+            'witch': '🧙‍♀️ Bruja',
+            'day': '☀️ Día'
+        }
+        phaseDisplay.textContent = phaseNames[currentPhase] || currentPhase
+    }
+
+    if (connectionStatus) {
+        connectionStatus.textContent = 'Conectado'
+        connectionStatus.className = 'status-value status-online'
+    }
+}
+
+// Inicia el timer
+const startPhaseTimer = (duration: number) => {
+    stopPhaseTimer()
+    
+    let remainingSeconds = duration
+    updateTimerDisplay(remainingSeconds)
+
+    timerInterval = window.setInterval(() => {
+        remainingSeconds--
+        updateTimerDisplay(remainingSeconds)
+        
+        if (remainingSeconds <= 0) {
+            stopPhaseTimer()
+        }
+    }, 1000)
+}
+
+// Para el timer
+const stopPhaseTimer = () => {
+    if (timerInterval) {
+        clearInterval(timerInterval)
+        timerInterval = null
+    }
+}
+
+// Actualiza el timer en pantalla
+const updateTimerDisplay = (seconds: number) => {
+    const timerDisplay = document.getElementById('timerDisplay')
+    if (timerDisplay) {
+        const minutes = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        timerDisplay.textContent = `${minutes}:${secs.toString().padStart(2, '0')}`
+    }
+}
+
+// Cambio de fase
+const handlePhaseChange = (phase: string, message: string, duration: number) => {
+    currentPhase = phase
+    updateGameStatusBar()
+    addGameMessage(message, 'system')
+    
+    if (duration > 0) {
+        startPhaseTimer(duration)
+    }
+
+    if (phase === 'day') {
+        votingInProgress = true
+        hasVoted = false
+        votes.clear()
+        renderCards()
+    } else {
+        votingInProgress = false
+        votingType = null
+        eligibleVoters = []
+        eligibleTargets = []
+    }
+}
+
+// Procesa votos del websocket
+const processVotes = (votesData: Record<string, number[]>) => {
+    votes.clear()
+    for (const [targetId, voterIds] of Object.entries(votesData)) {
+        votes.set(parseInt(targetId), voterIds)
+    }
+    renderCards()
+}
+
+// Verifica si la partida esta en curso
+const checkGameMode = () => {
+    const statusName = getStatusName(gameData?.status).toLowerCase()
+    const isGameInProgress = statusName === 'en_progreso' || statusName === 'en_curso'
+
+    if (isGameInProgress && gameMode !== 'playing') {
+        gameMode = 'playing'
+        updateGameStatusBar()
+        addGameMessage('🎮 ¡La partida ha comenzado!', 'system')
+    } else if (!isGameInProgress && gameMode === 'playing') {
+        gameMode = 'lobby'
+        stopPhaseTimer()
+    }
 }
 
 // ======== Variables para el chat ========
@@ -688,9 +837,7 @@ let chatInitialized = false
 let lobbyChannel: any = null
 let lobbyUpdatesInitialized = false
 
-/**
- * Renderiza un mensaje en el chat
- */
+// Renderiza mensaje en el chat
 const renderChatMessage = (data: any, container: HTMLElement) => {
     const messageDiv = document.createElement('div')
     messageDiv.classList.add('chat-message')
@@ -709,9 +856,7 @@ const renderChatMessage = (data: any, container: HTMLElement) => {
     container.scrollTop = container.scrollHeight
 }
 
-/**
- * Carga el historial del chat
- */
+// Carga historial del chat
 const loadChatHistory = async (gameId: number, container: HTMLElement) => {
     const { loadChatHistory: loadHistory } = await import('../chatWebsocket/chatArchive')
     
@@ -728,9 +873,7 @@ const loadChatHistory = async (gameId: number, container: HTMLElement) => {
     }
 }
 
-/**
- * Inicializa el chat en el lobby
- */
+// Inicializa el chat
 const initChat = async (gameId: number) => {
     if (chatInitialized) return
 
@@ -889,9 +1032,7 @@ const initChat = async (gameId: number) => {
     }
 }
 
-/**
- * Inicializa las actualizaciones del lobby mediante WebSocket
- */
+// Inicializa actualizaciones del lobby via websocket
 const initLobbyUpdates = async (gameId: number) => {
     if (lobbyUpdatesInitialized) return
 
@@ -963,6 +1104,138 @@ const initLobbyUpdates = async (gameId: number) => {
             }
         })
 
+        // Escuchar evento de cambio de fase del juego
+        lobbyChannel.bind('game.phase.changed', (data: any) => {
+            console.log('Fase del juego cambiada:', data)
+            
+            if (data.game_id === currentGameId) {
+                // Actualizar estado de votación
+                if (data.voting_in_progress !== undefined) {
+                    votingInProgress = data.voting_in_progress
+                }
+                
+                // Manejar el cambio de fase
+                handlePhaseChange(data.phase, data.phase_message || `Fase: ${data.phase}`, data.duration || 0)
+            }
+        })
+
+        // Escuchar evento de inicio de votación
+        lobbyChannel.bind('voting.started', (data: any) => {
+            console.log('Votación iniciada:', data)
+            
+            if (data.gameId === currentGameId) {
+                votingInProgress = true
+                votingType = data.votingType
+                eligibleVoters = data.eligibleVoters || []
+                eligibleTargets = data.eligibleTargets || []
+                hasVoted = false
+                votes.clear()
+                
+                console.log('Votantes elegibles:', eligibleVoters)
+                console.log('Objetivos elegibles:', eligibleTargets)
+                
+                // Re-renderizar las cartas para actualizar el estado visual
+                renderCards()
+            }
+        })
+
+        // Escuchar evento de voto recibido
+        lobbyChannel.bind('game.vote.received', (data: any) => {
+            console.log('Voto recibido:', data)
+            
+            if (data.game_id === currentGameId && data.votes) {
+                processVotes(data.votes)
+            }
+        })
+
+        // Escuchar evento de fin de votación
+        lobbyChannel.bind('voting.ended', (data: any) => {
+            console.log('Votación finalizada:', data)
+            
+            if (data.gameId === currentGameId) {
+                votingInProgress = false
+                votingType = null
+                eligibleVoters = []
+                eligibleTargets = []
+                hasVoted = false
+                votes.clear()
+                
+                // Mostrar resultado de la votación
+                if (data.eliminatedPlayerNick) {
+                    addGameMessage(`${data.eliminatedPlayerNick} ha sido eliminado por votación`, 'system')
+                } else {
+                    addGameMessage('La votación ha terminado sin eliminados', 'system')
+                }
+                
+                // Re-renderizar las cartas
+                renderCards()
+            }
+        })
+
+        // Jugador eliminado
+        lobbyChannel.bind('player.killed', (data: any) => {
+            console.log('Jugador eliminado:', data)
+            
+            const causeText: Record<string, string> = {
+                'wolves': 'ha sido devorado por los lobos',
+                'village': 'ha sido linchado por el pueblo',
+                'witch': 'ha sido envenenado por la bruja',
+                'hunter': 'ha sido cazado',
+                'lovers': 'ha muerto de amor'
+            }
+            
+            const msg = causeText[data.cause] || 'ha sido eliminado'
+            addGameMessage(`${data.playerNick} ${msg}`, 'system')
+            
+            // Marcar jugador como muerto en gameData
+            if (gameData?.players) {
+                const player = gameData.players.find((p: any) => p.id === data.playerId)
+                if (player) player.is_alive = false
+            }
+            
+            renderCards()
+        })
+
+        // Mensajes del juego
+        lobbyChannel.bind('game.message', (data: any) => {
+            console.log('Mensaje del juego:', data)
+            addGameMessage(data.message, data.type || 'system')
+        })
+
+        // Fin de partida
+        lobbyChannel.bind('game.ended', (data: any) => {
+            console.log('Partida terminada:', data)
+            
+            const winnerText: Record<string, string> = {
+                'wolves': 'Los lobos han ganado',
+                'village': 'El pueblo ha ganado',
+                'lovers': 'Los enamorados han ganado'
+            }
+            
+            const msg = winnerText[data.winner] || 'La partida ha terminado'
+            addGameMessage(msg, 'system')
+            
+            // Mostrar supervivientes
+            if (data.survivors?.length > 0) {
+                const names = data.survivors.map((s: any) => s.nickname || s.nick).join(', ')
+                addGameMessage(`Supervivientes: ${names}`, 'system')
+            }
+            
+            gameMode = 'lobby'
+            stopPhaseTimer()
+        })
+
+        // Solicitud de acción
+        lobbyChannel.bind('action.prompt', (data: any) => {
+            console.log('Acción requerida:', data)
+            
+            // Solo mostrar si es para el jugador actual
+            if (data.targetPlayerId !== currentUserId) return
+            
+            // TODO: mostrar modal de acción segun actionType
+            console.log('Debes realizar una acción:', data.actionType)
+        })
+
         // Eventos de conexión
         pusher.connection.bind('connected', () => {
             console.info('✅ Conectado a actualizaciones del lobby')
@@ -979,9 +1252,7 @@ const initLobbyUpdates = async (gameId: number) => {
     }
 }
 
-/**
- * Inicializa la vista del lobby
- */
+// Init
 const init = async () => {
     // Verificar autenticación
     if (!requireAuth()) {
@@ -1005,6 +1276,9 @@ const init = async () => {
 
     // Cargar información de la partida
     await loadGameInfo(gameId)
+
+    // Verificar si la partida está en curso
+    checkGameMode()
 
     // Inicializar el chat
     await initChat(gameId)

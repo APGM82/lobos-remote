@@ -17,13 +17,18 @@ WORKDIR /var/www/html
 # Copiar archivos de Laravel
 COPY . .
 
+# Establecer variable de entorno para evitar problemas con drivers de broadcasting no instalados
+ENV BROADCAST_CONNECTION=null
+
 # Instalar dependencias de PHP
 # Si existe composer.lock, usarlo; si no, instalar y generar uno
+# Usar --no-scripts para evitar que se ejecuten scripts que requieren Laravel configurado
+# No usar --no-dev para mantener consistencia con el entrypoint que instala todas las dependencias
 RUN if [ -f composer.lock ]; then \
-        composer install --no-dev --optimize-autoloader; \
+        composer install --optimize-autoloader --no-scripts; \
     else \
-        composer install --optimize-autoloader && \
-        composer update --optimize-autoloader; \
+        composer install --optimize-autoloader --no-scripts && \
+        composer update --optimize-autoloader --no-scripts; \
     fi
 
 # Copiar .env.example a .env si no existe .env
