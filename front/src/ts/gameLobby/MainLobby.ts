@@ -1,6 +1,5 @@
 import { getGameInfo, leaveGame, startGame, updateGameDetails } from './CrudLobby.ts'
 import { requireAuth, getUser, getToken } from '../auth.ts'
-import {getUserById} from '../adminUser/CrudUser.ts'
 import routes from '../routes.ts'
 import Pusher from 'pusher-js';
 import { 
@@ -537,8 +536,8 @@ const renderCards = () => {
     cardsContainer.innerHTML = ''
 
     const maxPlayers = gameData.max_players || 30
-    const players = gameData.players || []
-    
+    const players = (gameData.players || []).sort(() => Math.random() - 0.5)
+
     if (Array.isArray(players)) {
         gameData.current_players = players.length
     }
@@ -561,7 +560,7 @@ const renderCards = () => {
     for (let i = 0; i < maxPlayers; i++) {
         const player = playersByPosition[i]
         const isEnabled = !!player
-        const isHost = isEnabled && player && hostId !== null && player.id === hostId
+        //const isHost = isEnabled && player && hostId !== null && player.id === hostId
 
         // Crear tarjeta rectangular
         const playerCard = document.createElement('div')
@@ -570,9 +569,9 @@ const renderCards = () => {
         if (!isEnabled) {
             playerCard.classList.add('disabled')
         }
-        if (isHost) {
-            playerCard.classList.add('host-card')
-        }
+        //if (isHost) {
+        //    playerCard.classList.add('host-card')
+        //}
 
         // Si la partida está en curso y hay votación, añadir clase votable
         if (isEnabled && isGameInProgress && votingInProgress && player) {
@@ -596,7 +595,22 @@ const renderCards = () => {
         // Avatar del jugador
         const avatar = document.createElement('div')
         avatar.classList.add('player-avatar')
-        
+
+        const currentPlayer = players.find(p  => p.id === currentUserId)
+        if (currentPlayer.character === 3 && player && player.character === 3) {
+            playerCard.classList.add('lobo')
+        } else if (currentPlayer.id == player.id) {
+            switch (player.character) {
+                case 2: playerCard.classList.add('aldeano'); break;
+                case 4: playerCard.classList.add('cupido'); break;
+                case 5: playerCard.classList.add('ladron'); break;
+                case 6: playerCard.classList.add('protector'); break;
+                case 7: playerCard.classList.add('bruja'); break;
+                case 8: playerCard.classList.add('vidente'); break;
+                case 9: playerCard.classList.add('niña'); break;
+                default:
+            }
+        }
         if (isEnabled && player) {
             if (player.profile_image) {
                 const avatarImg = document.createElement('img')

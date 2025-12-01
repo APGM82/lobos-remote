@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Game;
+use App\Models\User;
 use App\Models\GameLobby;
 use App\Models\StatusCode;
 use App\Models\Character;
@@ -663,7 +664,7 @@ class GameController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             // Usar transacción para evitar race conditions
             return DB::transaction(function () use ($user, $id) {
                 $game = Game::with(['users', 'status'])->find($id);
@@ -884,7 +885,13 @@ class GameController extends Controller
             $game->code_status = $statusInProgress->id;
             $game->save();
 
-            $game->load(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
+            $this->assignCharactersToUser($id);
+
+            $game->load([
+                'userHost:id,name,nickname',
+                'status:id,code_status,name',
+                'users:id,name,nickname'
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -898,11 +905,15 @@ class GameController extends Controller
                         'code' => $game->status->code_status ?? null,
                         'name' => $game->status->name ?? 'unknown',
                     ],
-                    'players' => $game->users->map(function ($player) {
+                    'players' => $game->users->map(function ($player) use ($game) {
                         return [
                             'id' => $player->id,
                             'name' => $player->name,
                             'nickname' => $player->nickname,
+                            'character' => $player->characterInGame()
+                                ->wherePivot('id_game', $game->id)
+                                ->first()
+                                ?->name,
                         ];
                     }),
                 ],
@@ -1011,7 +1022,7 @@ class GameController extends Controller
 
             // Disparar evento de broadcasting
             event(new PlayerLeft($game, $playerInfo, false));
-            
+
             // Si se transfirió el host, notificar el cambio vía websocket
             if ($hostTransferred) {
                 event(new GameUpdated($game));
@@ -1033,5 +1044,93 @@ class GameController extends Controller
             ], 500);
         }
     }
+
+    public function assignCharactersToUser($idGame)
+    {
+        $game = Game::find($idGame);
+        if (!$game) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La partida no existe'
+            ], 404);
+        }
+
+        // Asegúrate de comprobar el estado correcto (ajusta según tu modelo)
+        // Aquí se asume que $game->code_status es el id del status.
+        $waitingStatus = StatusCode::where('name', 'waiting')->first();
+        if ($waitingStatus && $game->code_status !== $waitingStatus->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La partida no está en estado "waiting"'
+            ], 422);
+        }
+
+        $lobbies = GameLobby::where('id_game', $idGame)->get();
+        if ($lobbies->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay usuarios en la partida'
+            ], 404);
+        }
+
+        $characters = Character::all()->keyBy('name');
+        if ($characters->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay personajes en la base de datos'
+            ], 404);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $userIds = $lobbies->pluck('id_user')->toArray();
+            $totalUsers = count($userIds);
+
+            // Limpia asignaciones previas en la pivot para esta partida (evita duplicados/estado anterior)
+            GameLobby::where('id_game', $idGame)->whereIn('id_user', $userIds)->delete();
+
+            // Calcula número de lobos y mezcla usuarios
+            $maxWolves = 1 + floor($totalUsers / 10);
+            shuffle($userIds);
+
+            $index = 0;
+
+            // Asignar lobos
+            for ($n = 0; $n < $maxWolves && $index < $totalUsers; $n++, $index++) {
+                $userId = $userIds[$index];
+
+                // Attach al pivot usando la relación del User para que Laravel maneje la pivot correctamente
+                $user = User::find($userId);
+                if ($user) {
+                    $user->characterInGame()->attach($characters['Lobo']->id, ['id_game' => $idGame]);
+                }
+            }
+
+            // El resto aldeanos
+            for (; $index < $totalUsers; $index++) {
+                $userId = $userIds[$index];
+                $user = User::find($userId);
+                if ($user) {
+                    $user->characterInGame()->attach($characters['Aldeano']->id, ['id_game' => $idGame]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Personajes asignados correctamente',
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al asignar personajes en la base de datos',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
 

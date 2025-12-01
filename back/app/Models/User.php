@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use Dom\CharacterData;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -26,7 +28,8 @@ class User extends Authenticatable
         'email',
         'nickname',
         'password',
-        'image'
+        'image',
+        'isBot'
     ];
 
     /**
@@ -62,8 +65,7 @@ class User extends Authenticatable
 
     public function characterInGame()
     {
-        return $this->belongsToMany(GameCharacter::class, 'game_lobbies', 'id_user', 'id_character')
-            ->withPivot('id_game')
-            ->withTimestamps();
+    return $this->belongsToMany(Character::class, 'game_lobbies', 'id_user', 'id_character')
+        ->withPivot('id_game');
     }
 }
