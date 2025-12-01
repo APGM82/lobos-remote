@@ -11,6 +11,9 @@
     "test": "tsc --noEmit",
     "prepare": "husky"
   },
+  "dependencies": {
+    "pusher-js": "^8.0.0"
+  },
   "devDependencies": {
     "husky": "^9.1.7",
     "typescript": "~5.9.3",

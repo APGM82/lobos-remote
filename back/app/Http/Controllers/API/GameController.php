@@ -7,6 +7,9 @@ use App\Models\Game;
 use App\Models\GameLobby;
 use App\Models\StatusCode;
 use App\Models\Character;
+use App\Events\PlayerJoined;
+use App\Events\PlayerLeft;
+use App\Events\GameUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -572,6 +575,9 @@ class GameController extends Controller
 
             $game->load(['userHost:id,name,nickname', 'status:id,code_status,name']);
 
+            // Disparar evento de broadcasting para notificar a los jugadores del cambio
+            event(new GameUpdated($game));
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -657,7 +663,10 @@ class GameController extends Controller
     {
         try {
             $user = $request->user();
-            $game = Game::with(['users', 'status'])->find($id);
+            
+            // Usar transacción para evitar race conditions
+            return DB::transaction(function () use ($user, $id) {
+                $game = Game::with(['users', 'status'])->find($id);
 
             if (!$game) {
                 return response()->json([
@@ -687,9 +696,10 @@ class GameController extends Controller
                 ], 422);
             }
 
-            // Verificar que el usuario no esté ya en la partida
+            // Verificar que el usuario no esté ya en la partida (con lock para evitar race conditions)
             $alreadyJoined = GameLobby::where('id_game', $game->id)
                 ->where('id_user', $user->id)
+                ->lockForUpdate()
                 ->exists();
 
             if ($alreadyJoined) {
@@ -733,8 +743,10 @@ class GameController extends Controller
                 }
             }
 
-            // Verificar que haya espacio disponible (contar directamente desde la BD)
-            $currentPlayers = GameLobby::where('id_game', $game->id)->count();
+            // Verificar que haya espacio disponible (con lock para evitar race conditions)
+            $currentPlayers = GameLobby::where('id_game', $game->id)
+                ->lockForUpdate()
+                ->count();
             if ($currentPlayers >= $game->max_players) {
                 return response()->json([
                     'success' => false,
@@ -768,6 +780,16 @@ class GameController extends Controller
             $game = Game::with(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname'])
                 ->find($game->id);
 
+            // Preparar información del jugador que se unió
+            $playerInfo = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'nickname' => $user->nickname,
+            ];
+
+            // Disparar evento de broadcasting
+            event(new PlayerJoined($game, $playerInfo));
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -786,6 +808,7 @@ class GameController extends Controller
                 ],
                 'message' => 'Te has unido a la partida correctamente'
             ], 200);
+            }, 5); // Timeout de 5 segundos para la transacción
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
@@ -934,14 +957,6 @@ class GameController extends Controller
             // Contar jugadores actuales
             $currentPlayers = $game->users->count();
 
-            // Si es el host y hay más jugadores, no permitir abandonar (debe transferir el host o eliminar la partida)
-            if ($game->id_user_host === $user->id && $currentPlayers > 1) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No puedes abandonar la partida siendo el host. Debes eliminar la partida o transferir el host.'
-                ], 422);
-            }
-
             // Eliminar al usuario de la partida
             GameLobby::where('id_game', $game->id)
                 ->where('id_user', $user->id)
@@ -949,6 +964,13 @@ class GameController extends Controller
 
             // Verificar si quedan jugadores
             $remainingPlayers = GameLobby::where('id_game', $game->id)->count();
+
+            // Preparar información del jugador que abandonó
+            $playerInfo = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'nickname' => $user->nickname,
+            ];
 
             // Si no quedan jugadores, hacer soft delete (cambiar estado a "deleted")
             if ($remainingPlayers === 0) {
@@ -965,6 +987,9 @@ class GameController extends Controller
                 $game->code_status = $deletedStatus->id;
                 $game->save();
 
+                // Disparar evento de broadcasting indicando que la partida fue eliminada
+                event(new PlayerLeft($game, $playerInfo, true));
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Has abandonado la partida. La partida ha sido eliminada por no tener jugadores.'
@@ -972,15 +997,25 @@ class GameController extends Controller
             }
 
             // Si era el host y quedan jugadores, asignar el host al primer jugador restante
+            $hostTransferred = false;
             if ($game->id_user_host === $user->id && $remainingPlayers > 0) {
                 $newHost = GameLobby::where('id_game', $game->id)->first();
                 if ($newHost) {
                     $game->id_user_host = $newHost->id_user;
                     $game->save();
+                    $hostTransferred = true;
                 }
             }
 
             $game->load(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
+
+            // Disparar evento de broadcasting
+            event(new PlayerLeft($game, $playerInfo, false));
+            
+            // Si se transfirió el host, notificar el cambio vía websocket
+            if ($hostTransferred) {
+                event(new GameUpdated($game));
+            }
 
             return response()->json([
                 'success' => true,

@@ -17,6 +17,6 @@ export default defineConfig({
     // Logs detallados en build
     minify: false, // En desarrollo, no minificar para ver mejor los errores
     sourcemap: true, // Generar sourcemaps para debugging
-  }
+  },
 })
 
