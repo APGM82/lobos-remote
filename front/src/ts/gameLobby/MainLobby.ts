@@ -560,6 +560,7 @@ const renderCards = () => {
     for (let i = 0; i < maxPlayers; i++) {
         const player = playersByPosition[i]
         const isEnabled = !!player
+        const isHost = isEnabled && player && hostId !== null && player.id === hostId
 
         // Crear tarjeta rectangular
         const playerCard = document.createElement('div')
@@ -567,6 +568,9 @@ const renderCards = () => {
         
         if (!isEnabled) {
             playerCard.classList.add('disabled')
+        }
+        if (isHost) {
+            cardDiamond.classList.add('host-card')
         }
 
         // Si la partida está en curso y hay votación, añadir clase votable
