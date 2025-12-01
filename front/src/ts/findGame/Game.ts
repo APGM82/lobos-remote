@@ -229,17 +229,34 @@ const chargeTable = (games: any[]) => {
             joinButton.classList.add('btn', 'success')
             joinButton.value = game.id.toString()
             joinButton.textContent = 'Unirse'
-            joinButton.addEventListener('click', (e) => {
+            let isProcessing = false
+            joinButton.addEventListener('click', async (e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                // Asegurar que game.id sea un número
-                const gameId = typeof game.id === 'number' ? game.id : parseInt(game.id, 10)
-                if (isNaN(gameId)) {
-                    console.error('ID de partida inválido:', game.id)
-                    alert('Error: ID de partida inválido')
+                
+                // Prevenir múltiples clics
+                if (isProcessing) {
                     return
                 }
-                handleJoinGame(gameId)
+                
+                isProcessing = true
+                joinButton.disabled = true
+                joinButton.textContent = 'Uniéndose...'
+                
+                try {
+                    // Asegurar que game.id sea un número
+                    const gameId = typeof game.id === 'number' ? game.id : parseInt(game.id, 10)
+                    if (isNaN(gameId)) {
+                        console.error('ID de partida inválido:', game.id)
+                        alert('Error: ID de partida inválido')
+                        return
+                    }
+                    await handleJoinGame(gameId)
+                } finally {
+                    isProcessing = false
+                    joinButton.disabled = false
+                    joinButton.textContent = 'Unirse'
+                }
             })
             div.appendChild(joinButton)
         }
@@ -611,7 +628,15 @@ const handleLeaveAndJoin = async (currentGameId: number, newGameId: number) => {
     }
 }
 
+let isJoiningGame = false
+
 const handleJoinGame = async (gameId: number) => {
+    // Prevenir múltiples clics simultáneos
+    if (isJoiningGame) {
+        console.log('Ya se está procesando una solicitud de unión, espera...')
+        return
+    }
+
     try {
         // Validar que gameId sea un número válido
         if (!gameId || isNaN(gameId)) {
@@ -620,6 +645,7 @@ const handleJoinGame = async (gameId: number) => {
             return
         }
 
+        isJoiningGame = true
         console.log('Intentando unirse a la partida:', gameId)
         const response = await joinGame(gameId)
         
@@ -669,6 +695,8 @@ const handleJoinGame = async (gameId: number) => {
     } catch (error) {
         console.error('Error al unirse a la partida:', error)
         alert('Error de conexión al unirse a la partida: ' + (error instanceof Error ? error.message : String(error)))
+    } finally {
+        isJoiningGame = false
     }
 }
 
