@@ -902,8 +902,6 @@ const initChat = async (gameId: number) => {
         }
 
         // Configurar Pusher
-
-        // Configurar Pusher
         pusher = new Pusher(reverbConfig.appKey, {
             wsHost: wsHost,
             wsPort: reverbConfig.port,
