@@ -3,6 +3,11 @@
   "dockerComposeFile": "../docker-compose.yaml",
   "service": "frontend",
   "workspaceFolder": "/app",
+  "features": {
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    }
+  },
   "forwardPorts": [5173, 8000, 8080, 3306],
   "portsAttributes": {
     "5173": {
