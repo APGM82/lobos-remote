@@ -104,7 +104,7 @@ const loadGameInfo = async (gameId: number) => {
         if (data.success && data.data) {
             gameData = data.data
             updateLobbyInfo()
-            await renderCards()
+            renderCards()
         } else {
             alert(data.message || 'Error al cargar la partida')
         }
@@ -198,7 +198,9 @@ const updateStartButtonState = () => {
     const hostId = gameData.host?.id ?? null
     const isHost = currentUserId !== null && hostId === currentUserId
 
-    if (!isHost) {
+    console.log(gameData.status?.name)
+
+    if (!isHost || gameData.status?.name === 'en_progreso' || gameData.status?.name === 'en_curso' || gameData.status?.name === 'finalizada') {
         hideHostControls()
         return
     }
