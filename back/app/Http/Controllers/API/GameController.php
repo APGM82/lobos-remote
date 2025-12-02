@@ -897,6 +897,8 @@ class GameController extends Controller
                 'users:id,name,nickname'
             ]);
 
+            event(new GameUpdated($game));
+
             // Iniciar flujo del juego usando el servicio
             $flowData = $this->gameFlowService->startGame($game);
 
