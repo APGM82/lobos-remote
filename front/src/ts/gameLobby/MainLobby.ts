@@ -8,6 +8,7 @@ import {
     getApiConfig
 } from '../chatWebsocket/connection/config';
 
+// Variables globales
 let gameData: any = null
 let currentGameId: number | null = null
 let currentUserId: number | null = null

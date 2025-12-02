@@ -104,7 +104,7 @@ class GameFlowService
         ];
     }
 
-    // ==================== AVANZAR FASE ====================
+    // =>AVANZAR FASE
 
     /**
      * Avanzar a la siguiente fase
@@ -303,7 +303,7 @@ class GameFlowService
         return $durations[$phase] ?? 30;
     }
 
-    // ==================== VOTACIONES ====================
+    // => VOTACIONES
 
     /**
      * Iniciar votación de lobos
@@ -349,7 +349,7 @@ class GameFlowService
         $this->makeBotsVote($gameId, 'village', $alivePlayers, $playerIds);
     }
 
-    // ==================== MUERTES NOCTURNAS ====================
+    // => MUERTES NOCTURNAS
 
     /**
      * Aplicar las muertes de la noche
@@ -466,7 +466,7 @@ class GameFlowService
         return $additionalDeaths;
     }
 
-    // ==================== CONDICIÓN DE VICTORIA ====================
+    // => CONDICIÓN DE VICTORIA
 
     /**
      * Verificar condición de victoria
@@ -532,7 +532,7 @@ class GameFlowService
         Cache::forget("game_state_{$gameId}");
     }
 
-    // ==================== HELPERS ====================
+    // => HELPERS
 
     /**
      * Obtener estado del juego desde cache
