@@ -10,6 +10,7 @@ use App\Models\Character;
 use App\Events\PlayerJoined;
 use App\Events\PlayerLeft;
 use App\Events\GameUpdated;
+use App\Services\GameFlowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,13 @@ use Exception;
 
 class GameController extends Controller
 {
+    protected GameFlowService $gameFlowService;
+
+    public function __construct(GameFlowService $gameFlowService)
+    {
+        $this->gameFlowService = $gameFlowService;
+    }
+
     /**
      * Listar todas las partidas
      * Permite filtrar por nombre
@@ -885,6 +893,9 @@ class GameController extends Controller
 
             $game->load(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
 
+            // Iniciar flujo del juego usando el servicio
+            $flowData = $this->gameFlowService->startGame($game);
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -897,6 +908,9 @@ class GameController extends Controller
                         'code' => $game->status->code_status ?? null,
                         'name' => $game->status->name ?? 'unknown',
                     ],
+                    'phase' => $flowData['phase'],
+                    'turn' => $flowData['turn'],
+                    'phaseDuration' => $flowData['duration'],
                     'players' => $game->users->map(function ($player) {
                         return [
                             'id' => $player->id,
