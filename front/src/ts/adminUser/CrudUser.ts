@@ -16,6 +16,20 @@ const getUsers = async (page: number = 1) => {
     }
 }
 
+const getUserById = async (id : Number) => {
+    try {
+        return await fetch(`${apiUrl}/${id}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+    } catch (error) {
+        throw error
+    }
+}
+
 const getFilterUsers = async (nickname : String, page: number = 1) => {
     try {
         return await fetch(`${apiUrl}/${nickname}?page=${page}`, {
@@ -94,6 +108,7 @@ const deleteUser = async (id : number) => {
 
 export {
     getUsers,
+    getUserById,
     getFilterUsers,
     getUserByToken,
     addUser,

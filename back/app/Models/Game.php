@@ -28,7 +28,8 @@ class Game extends Model
     }
 
     public function users() {
-        return $this->belongsToMany(User::class, 'game_lobbies', 'id_game', 'id_user');
+        return $this->belongsToMany(User::class, 'game_lobbies', 'id_game', 'id_user')
+            ->withPivot('id_character');
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Game;
+use App\Models\User;
 use App\Models\GameLobby;
 use App\Models\StatusCode;
 use App\Models\Character;
@@ -35,13 +36,13 @@ class GameController extends Controller
         try {
             $user = $request->user();
             $isAdmin = $user && $user->tokenCan('admin');
-            
+
             $query = Game::with(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
 
             // Filtro por estado si se proporciona (solo para admin)
             // Si hay filtro por estado, aplicarlo primero y no excluir eliminadas (ya que el filtro de estado es específico)
             $hasStatusFilter = $request->has('status') && $request->status && $isAdmin;
-            
+
             if ($hasStatusFilter) {
                 $statusName = $request->status;
                 $statusCode = StatusCode::where('name', $statusName)->first();
@@ -54,9 +55,9 @@ class GameController extends Controller
                 $deletedStatus = StatusCode::where('name', 'eliminada')->first();
                 $finishedStatus = StatusCode::where('name', 'finalizada')->first();
                 $includeDeleted = $request->has('include_deleted') && $request->include_deleted === 'true' && $isAdmin;
-                
+
                 $statusesToExclude = [];
-                
+
                 if ($deletedStatus) {
                     if ($includeDeleted) {
                         // Si el admin solicita ver eliminadas, mostrar SOLO las eliminadas
@@ -66,12 +67,12 @@ class GameController extends Controller
                         $statusesToExclude[] = $deletedStatus->id;
                     }
                 }
-                
+
                 // Excluir partidas finalizadas del listado principal
                 if ($finishedStatus && !$includeDeleted) {
                     $statusesToExclude[] = $finishedStatus->id;
                 }
-                
+
                 // Aplicar exclusión de estados si hay alguno que excluir
                 if (!empty($statusesToExclude)) {
                     $query->whereNotIn('code_status', $statusesToExclude);
@@ -91,12 +92,12 @@ class GameController extends Controller
             // La partida activa no debería estar finalizada, así que no hay conflicto
             if ($user) {
                 $userLobbies = GameLobby::where('id_user', $user->id)->pluck('id_game');
-                
+
                 if ($userLobbies->isNotEmpty()) {
                     // Obtener estados que no se consideran "activos" (eliminadas, finalizadas)
                     $deletedStatus = StatusCode::where('name', 'eliminada')->first();
                     $finishedStatus = StatusCode::where('name', 'finalizada')->first();
-                    
+
                     $blockedStatusIds = [];
                     if ($finishedStatus) {
                         $blockedStatusIds[] = $finishedStatus->id;
@@ -104,7 +105,7 @@ class GameController extends Controller
                     if ($deletedStatus) {
                         $blockedStatusIds[] = $deletedStatus->id;
                     }
-                    
+
                     // Obtener todas las partidas activas del usuario (que no estén eliminadas o finalizadas)
                     $activeGameIds = [];
                     if (!empty($blockedStatusIds)) {
@@ -116,7 +117,7 @@ class GameController extends Controller
                         // Si no hay estados bloqueados, tomar todas las partidas del usuario
                         $activeGameIds = $userLobbies->toArray();
                     }
-                    
+
                     // Excluir todas las partidas activas del listado
                     if (!empty($activeGameIds)) {
                         $query->whereNotIn('id', $activeGameIds);
@@ -220,6 +221,7 @@ class GameController extends Controller
                         'id' => $user->id,
                         'name' => $user->name,
                         'nickname' => $user->nickname,
+                        'character' => $user->pivot->id_character,
                     ];
                 }),
                 'created_at' => $game->created_at,
@@ -246,7 +248,7 @@ class GameController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             if (!$user) {
                 return response()->json([
                     'success' => false,
@@ -256,7 +258,7 @@ class GameController extends Controller
 
             // Obtener todas las partidas donde el usuario participa
             $userLobbies = GameLobby::where('id_user', $user->id)->pluck('id_game');
-            
+
             if ($userLobbies->isEmpty()) {
                 return response()->json([
                     'success' => true,
@@ -268,7 +270,7 @@ class GameController extends Controller
             // Obtener estados bloqueados (eliminadas, finalizadas)
             $deletedStatus = StatusCode::where('name', 'eliminada')->first();
             $finishedStatus = StatusCode::where('name', 'finalizada')->first();
-            
+
             $blockedStatusIds = [];
             if ($finishedStatus) {
                 $blockedStatusIds[] = $finishedStatus->id;
@@ -276,7 +278,7 @@ class GameController extends Controller
             if ($deletedStatus) {
                 $blockedStatusIds[] = $deletedStatus->id;
             }
-            
+
             // Obtener la partida activa del usuario (que no esté eliminada o finalizada)
             $activeGame = null;
             if (!empty($blockedStatusIds)) {
@@ -396,12 +398,12 @@ class GameController extends Controller
 
             // Obtener el estado "en_espera" para nuevas partidas
             $status = StatusCode::where('name', 'en_espera')->first();
-            
+
             // Si no existe "en_espera", intentar con "creada" como fallback
             if (!$status) {
                 $status = StatusCode::where('name', 'creada')->first();
             }
-            
+
             // Si tampoco existe "created", usar el primero disponible o el id 1
             if (!$status) {
                 $status = StatusCode::where('id', 1)->first();
@@ -453,7 +455,7 @@ class GameController extends Controller
                     'id_character' => $defaultCharacter->id,
                     'is_alive' => true,
                 ]);
-                
+
                 return $game;
             });
 
@@ -631,7 +633,7 @@ class GameController extends Controller
             // Verificar permisos: admin puede eliminar cualquier partida, user solo si es host
             $isAdmin = $user->tokenCan('admin');
             $isHost = $game->id_user_host === $user->id;
-            
+
             if (!$isAdmin && !$isHost) {
                 return response()->json([
                     'success' => false,
@@ -670,7 +672,7 @@ class GameController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             // Usar transacción para evitar race conditions
             return DB::transaction(function () use ($user, $id) {
                 $game = Game::with(['users', 'status'])->find($id);
@@ -718,25 +720,25 @@ class GameController extends Controller
 
             // Verificar que el usuario no esté en otra partida activa
             $userLobbies = GameLobby::where('id_user', $user->id)->pluck('id_game');
-            
+
             if ($userLobbies->isNotEmpty()) {
                 // Obtener estados bloqueados (eliminadas, finalizadas)
                 // $deletedStatus ya está definido arriba
                 $finishedStatuses = StatusCode::whereIn('name', ['finalizada'])
                     ->pluck('id')
                     ->toArray();
-                
+
                 $blockedStatusIds = $finishedStatuses;
                 if ($deletedStatus) {
                     $blockedStatusIds[] = $deletedStatus->id;
                 }
-                
+
                 // Verificar si el usuario está en alguna partida que NO esté eliminada o finalizada
                 $activeGame = Game::whereIn('id', $userLobbies)
                     ->whereNotIn('code_status', $blockedStatusIds)
                     ->with(['status:id,code_status,name'])
                     ->first();
-                
+
                 if ($activeGame) {
                     return response()->json([
                         'success' => false,
@@ -881,17 +883,19 @@ class GameController extends Controller
 
             $currentPlayers = $game->users->count();
             if ($currentPlayers < $game->max_players) {
-                $remaining = $game->max_players - $currentPlayers;
-                return response()->json([
-                    'success' => false,
-                    'message' => "No se puede iniciar la partida. Faltan {$remaining} jugador(es)."
-                ], 422);
+                $this->fillBots($id);
             }
 
             $game->code_status = $statusInProgress->id;
             $game->save();
 
-            $game->load(['userHost:id,name,nickname', 'status:id,code_status,name', 'users:id,name,nickname']);
+            $this->assignCharactersToUser($id);
+
+            $game->load([
+                'userHost:id,name,nickname',
+                'status:id,code_status,name',
+                'users:id,name,nickname'
+            ]);
 
             // Iniciar flujo del juego usando el servicio
             $flowData = $this->gameFlowService->startGame($game);
@@ -911,11 +915,12 @@ class GameController extends Controller
                     'phase' => $flowData['phase'],
                     'turn' => $flowData['turn'],
                     'phaseDuration' => $flowData['duration'],
-                    'players' => $game->users->map(function ($player) {
+                    'players' => $game->users->map(function ($player) use ($game) {
                         return [
                             'id' => $player->id,
                             'name' => $player->name,
                             'nickname' => $player->nickname,
+                            'character' => $player->pivot->id_character
                         ];
                     }),
                 ],
@@ -1024,7 +1029,7 @@ class GameController extends Controller
 
             // Disparar evento de broadcasting
             event(new PlayerLeft($game, $playerInfo, false));
-            
+
             // Si se transfirió el host, notificar el cambio vía websocket
             if ($hostTransferred) {
                 event(new GameUpdated($game));
@@ -1046,5 +1051,125 @@ class GameController extends Controller
             ], 500);
         }
     }
+
+    public function assignCharactersToUser($idGame)
+    {
+        $game = Game::find($idGame);
+        if (!$game) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La partida no existe'
+            ], 404);
+        }
+
+        // Asegúrate de comprobar el estado correcto (ajusta según tu modelo)
+        // Aquí se asume que $game->code_status es el id del status.
+        $waitingStatus = StatusCode::where('name', 'waiting')->first();
+        if ($waitingStatus && $game->code_status !== $waitingStatus->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La partida no está en estado "waiting"'
+            ], 422);
+        }
+
+        $lobbies = GameLobby::where('id_game', $idGame)->get();
+        if ($lobbies->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay usuarios en la partida'
+            ], 404);
+        }
+
+        $characters = Character::all()->keyBy('name');
+        if ($characters->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay personajes en la base de datos'
+            ], 404);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $userIds = $lobbies->pluck('id_user')->toArray();
+            $totalUsers = count($userIds);
+
+            // Limpia asignaciones previas en la pivot para esta partida (evita duplicados/estado anterior)
+            GameLobby::where('id_game', $idGame)->whereIn('id_user', $userIds)->delete();
+
+            // Calcula número de lobos y mezcla usuarios
+            $maxWolves = 1 + floor($totalUsers / 10);
+            shuffle($userIds);
+
+            $index = 0;
+
+            // Asignar lobos
+            for ($n = 0; $n < $maxWolves && $index < $totalUsers; $n++, $index++) {
+                $userId = $userIds[$index];
+
+                // Attach al pivot usando la relación del User para que Laravel maneje la pivot correctamente
+                $user = User::find($userId);
+                if ($user) {
+                    $user->characterInGame()->attach($characters['Lobo']->id, ['id_game' => $idGame]);
+                }
+            }
+
+            // El resto aldeanos
+            for (; $index < $totalUsers; $index++) {
+                $userId = $userIds[$index];
+                $user = User::find($userId);
+                if ($user) {
+                    $user->characterInGame()->attach($characters['Aldeano']->id, ['id_game' => $idGame]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Personajes asignados correctamente',
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al asignar personajes en la base de datos',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function fillBots($idGame)
+    {
+    // Obtener el juego (un solo registro)
+    $game = Game::findOrFail($idGame); // en vez de Game::get()->where(...)
+
+    // Jugadores humanos ya en la partida
+    $players = GameLobby::where('id_game', $idGame)->get();
+    $numPlayers = $players->count();
+
+    // Si ya está llena, no hacemos nada
+    if ($numPlayers >= $game->max_players) {
+        return;
+    }
+
+    // Calcular cuántos bots faltan
+    $botsNeeded = $game->max_players - $numPlayers;
+
+    // Obtener bots disponibles (limitar al número necesario)
+    $bots = User::where('isBot', 1)
+        ->take($botsNeeded)
+        ->get();
+
+    // Insertar en GameLobby (o usar relación many-to-many si la tienes)
+    foreach ($bots as $bot) {
+        GameLobby::create([
+            'id_game'  => $idGame,
+            'id_user'  => $bot->id,
+            'id_character' => 1
+        ]);
+    }
+}
+
 }
 

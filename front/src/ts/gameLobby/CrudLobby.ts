@@ -2,7 +2,6 @@ import routes from "../routes.ts"
 import { getToken } from "../auth.ts"
 
 const apiUrl = routes.gamesUrl
-
 /**
  * Obtiene el token de autenticación dinámicamente
  * @returns Token de autenticación o null si no existe
@@ -64,7 +63,8 @@ const startGame = async (gameId: number) => {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
-            }
+            },
+            body: JSON.stringify({})
         });
     } catch (error) {
         throw error

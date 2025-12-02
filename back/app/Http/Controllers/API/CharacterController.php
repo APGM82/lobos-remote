@@ -51,14 +51,14 @@ class CharacterController extends Controller
             $totalUsers = count($users);
 
 
-            $uniqueRoles = [
-                'Cupido',
-                'Ladron',
-                'Protector',
-                'Niña',
-                'Bruja',
-                'Vidente'
-            ];
+            // $uniqueRoles = [
+            //     'Cupido',
+            //     'Ladron',
+            //     'Protector',
+            //     'Niña',
+            //     'Bruja',
+            //     'Vidente'
+            // ];
 
 
             $maxWolves = 1 + floor($totalUsers / 10);
@@ -67,13 +67,13 @@ class CharacterController extends Controller
             $index = 0;
 
 
-            foreach ($uniqueRoles as $roleName) {
-                $user = $shuffledUsers[$index];
-                $user->id_character = $characters[$roleName]->id;
-                $user->save();
+            // foreach ($uniqueRoles as $roleName) {
+            //     $user = $shuffledUsers[$index];
+            //     $user->id_character = $characters[$roleName]->id;
+            //     $user->save();
 
-                $index++;
-            }
+            //     $index++;
+            // }
 
             for ($n = 0; $n < $maxWolves && $index < $totalUsers; $n++) {
                 $user = $shuffledUsers[$index];

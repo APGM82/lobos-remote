@@ -151,6 +151,46 @@
     filter: grayscale(80%);
 }
 
+.player-card.cupido {
+    background: linear-gradient(145deg, #7b1fa2, #4a148c);
+    border-color: #ba68c8;
+}
+
+.player-card.ladron {
+    background: linear-gradient(145deg, #424242, #212121);
+    border-color: #9e9e9e;
+}
+
+.player-card.protector {
+    background: linear-gradient(145deg, #0d47a1, #002171);
+    border-color: #2196f3;
+}
+
+.player-card.nina {
+    background: linear-gradient(145deg, #ec407a, #c2185b);
+    border-color: #f48fb1;
+}
+
+.player-card.bruja {
+    background: linear-gradient(145deg, #4e342e, #260e04);
+    border-color: #8d6e63;
+}
+
+.player-card.vidente {
+    background: linear-gradient(145deg, #6a1b9a, #38006b);
+    border-color: #ab47bc;
+}
+
+.player-card.lobo {
+    background: linear-gradient(145deg, #880e4f, #560027);
+    border-color: #ff80ab;
+}
+
+.player-card.aldeano {
+    background: linear-gradient(145deg, #2e7d32, #1b5e20);
+    border-color: #66bb6a;
+}
+
 .player-card.votable {
     cursor: pointer;
 }

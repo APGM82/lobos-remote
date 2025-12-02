@@ -27,9 +27,10 @@ class UserFactory extends Factory
                 'email_verified_at' => now(),
                 'password' => static::$password ??= Hash::make('password'),
                 'remember_token' => Str::random(10),
+                'isBot' => 1
             ];
         }
-        
+
         // Fallback: generar valores aleatorios sin Faker
         $randomId = uniqid('user_', true);
         return [
@@ -40,6 +41,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'isBot' => 1
         ];
     }
 

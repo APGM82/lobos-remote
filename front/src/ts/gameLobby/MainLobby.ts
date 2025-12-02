@@ -106,7 +106,7 @@ const loadGameInfo = async (gameId: number) => {
         if (data.success && data.data) {
             gameData = data.data
             updateLobbyInfo()
-            renderCards()
+            await renderCards()
         } else {
             alert(data.message || 'Error al cargar la partida')
         }
@@ -214,7 +214,7 @@ const updateStartButtonState = () => {
     const maxPlayers = typeof gameData.max_players === 'number'
         ? gameData.max_players
         : playersArray.length
-    const canStart = !gameAlreadyStarted && maxPlayers > 0 && currentPlayers >= maxPlayers
+    const canStart = !gameAlreadyStarted && maxPlayers > 0
     const canEdit = !gameAlreadyStarted
 
     if (editButton) {
@@ -369,7 +369,7 @@ const bindEditButton = (gameId: number) => {
                 }
                 closeModal()
                 updateLobbyInfo()
-                renderCards()
+
                 // La actualización se refleja automáticamente vía websocket, no se muestra alerta
             } else {
                 alert(data.message || 'Error al actualizar la partida')
@@ -384,6 +384,7 @@ const bindEditButton = (gameId: number) => {
             if (confirmEditButton) {
                 confirmEditButton.disabled = false
             }
+
             updateStartButtonState()
         }
     }
@@ -448,7 +449,6 @@ const bindStartButton = (gameId: number) => {
                 }
 
                 updateLobbyInfo()
-                renderCards()
                 alert(data.message || 'La partida ha comenzado')
             } else {
                 alert(data.message || 'Error al iniciar la partida')
@@ -458,7 +458,9 @@ const bindStartButton = (gameId: number) => {
             alert('Error de conexión al iniciar la partida')
         } finally {
             isStartingGame = false
+            renderCards()
             updateStartButtonState()
+
         }
     }
 
@@ -538,8 +540,8 @@ const renderCards = () => {
     cardsContainer.innerHTML = ''
 
     const maxPlayers = gameData.max_players || 30
-    const players = gameData.players || []
-    
+    const players = (gameData.players || []).sort(() => Math.random() - 0.5)
+
     if (Array.isArray(players)) {
         gameData.current_players = players.length
     }
@@ -600,7 +602,25 @@ const renderCards = () => {
         // Avatar del jugador
         const avatar = document.createElement('div')
         avatar.classList.add('player-avatar')
-        
+
+        const currentPlayer = players.find(p  => p.id === currentUserId)
+        if (player != null) {
+            if (currentPlayer.character === 3 && player && player.character === 3) {
+                playerCard.classList.add('lobo')
+            } else if (currentPlayer.id == player.id) {
+                switch (player.character) {
+                    case 2: playerCard.classList.add('aldeano'); break;
+                    case 4: playerCard.classList.add('cupido'); break;
+                    case 5: playerCard.classList.add('ladron'); break;
+                    case 6: playerCard.classList.add('protector'); break;
+                    case 7: playerCard.classList.add('bruja'); break;
+                    case 8: playerCard.classList.add('vidente'); break;
+                    case 9: playerCard.classList.add('niña'); break;
+                    default:
+                }
+            }
+        }
+
         if (isEnabled && player) {
             if (player.profile_image) {
                 const avatarImg = document.createElement('img')
