@@ -1,4 +1,4 @@
-import { getGameInfo, leaveGame, startGame, updateGameDetails } from './CrudLobby.ts'
+import { getGameInfo, leaveGame, startGame, updateGameDetails, getGameState, nextPhase } from './CrudLobby.ts'
 import { requireAuth, getUser, getToken } from '../auth.ts'
 import routes from '../routes.ts'
 import Pusher from 'pusher-js';
@@ -8,6 +8,7 @@ import {
     getApiConfig
 } from '../chatWebsocket/connection/config';
 
+// Variables globales
 let gameData: any = null
 let currentGameId: number | null = null
 let currentUserId: number | null = null
@@ -26,6 +27,8 @@ let gameMode: 'lobby' | 'playing' = 'lobby'
 let hasVoted = false
 let votingInProgress = false
 let votingType: 'wolves' | 'village' | null = null
+let myCharacter: string | null = null // Personaje del jugador actual
+let isMyTurn = false // Si es el turno del jugador actual para actuar
 let eligibleVoters: number[] = []
 let eligibleTargets: number[] = []
 let votes: Map<number, number[]> = new Map()
@@ -449,6 +452,17 @@ const bindStartButton = (gameId: number) => {
                 }
 
                 updateLobbyInfo()
+                
+                // Activar modo de juego directamente desde la respuesta del API
+                if (data.data.phase) {
+                    console.log('Partida iniciada, activando fase:', data.data.phase)
+                    handlePhaseChange(
+                        data.data.phase, 
+                        `La partida ha comenzado - Fase: ${data.data.phase}`,
+                        data.data.phaseDuration || 20
+                    )
+                }
+                
                 alert(data.message || 'La partida ha comenzado')
             } else {
                 alert(data.message || 'Error al iniciar la partida')
@@ -559,12 +573,15 @@ const renderCards = () => {
     // Verificar si la partida está en curso
     const statusName = getStatusName(gameData.status).toLowerCase()
     const isGameInProgress = statusName === 'en_progreso' || statusName === 'en_curso'
+    
+    // Obtener el ID del host
+    const hostId = gameData.host?.id ?? null
 
     // Renderizar cartas hasta max_players
     for (let i = 0; i < maxPlayers; i++) {
         const player = playersByPosition[i]
         const isEnabled = !!player
-        //const isHost = isEnabled && player && hostId !== null && player.id === hostId
+        const isHost = isEnabled && player && hostId !== null && player.id === hostId
 
         // Crear tarjeta rectangular
         const playerCard = document.createElement('div')
@@ -573,9 +590,9 @@ const renderCards = () => {
         if (!isEnabled) {
             playerCard.classList.add('disabled')
         }
-        //if (isHost) {
-        //    playerCard.classList.add('host-card')
-        //}
+        if (isHost) {
+            playerCard.classList.add('host-card')
+        }
 
         // Si la partida está en curso y hay votación, añadir clase votable
         if (isEnabled && isGameInProgress && votingInProgress && player) {
@@ -786,12 +803,26 @@ const startPhaseTimer = (duration: number) => {
     let remainingSeconds = duration
     updateTimerDisplay(remainingSeconds)
 
-    timerInterval = window.setInterval(() => {
+    timerInterval = window.setInterval(async () => {
         remainingSeconds--
         updateTimerDisplay(remainingSeconds)
         
         if (remainingSeconds <= 0) {
             stopPhaseTimer()
+            
+            // Solo el host avanza la fase automáticamente
+            const isHost = gameData?.host?.id === currentUserId
+            if (isHost && currentGameId) {
+                try {
+                    console.log('Timer terminado, avanzando a la siguiente fase...')
+                    const response = await nextPhase(currentGameId)
+                    if (!response.ok) {
+                        console.error('Error al avanzar fase:', response.status)
+                    }
+                } catch (error) {
+                    console.error('Error al avanzar fase:', error)
+                }
+            }
         }
     }, 1000)
 }
@@ -815,14 +846,32 @@ const updateTimerDisplay = (seconds: number) => {
 }
 
 // Cambio de fase
-const handlePhaseChange = (phase: string, message: string, duration: number) => {
+const handlePhaseChange = async (phase: string, message: string, duration: number) => {
     currentPhase = phase
+    
+    // Cambiar a modo "playing" cuando se recibe un cambio de fase
+    if (gameMode !== 'playing') {
+        gameMode = 'playing'
+        addGameMessage('🎮 ¡La partida ha comenzado!', 'system')
+        
+        // Obtener el estado del juego para conocer nuestro personaje
+        if (currentGameId) {
+            await loadGameStateInfo()
+        }
+    }
+    
     updateGameStatusBar()
     addGameMessage(message, 'system')
     
     if (duration > 0) {
         startPhaseTimer(duration)
     }
+
+    // Determinar si es el turno del jugador actual
+    checkIfMyTurn(phase)
+    
+    // Mostrar/ocultar panel de acción según la fase y el personaje
+    updateActionPanel(phase)
 
     if (phase === 'day') {
         votingInProgress = true
@@ -834,6 +883,103 @@ const handlePhaseChange = (phase: string, message: string, duration: number) => 
         votingType = null
         eligibleVoters = []
         eligibleTargets = []
+    }
+}
+
+// Cargar información del estado del juego (incluye personaje del jugador)
+const loadGameStateInfo = async () => {
+    if (!currentGameId) return
+    
+    try {
+        const response = await getGameState(currentGameId)
+        if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.data) {
+                // Buscar nuestro personaje en la lista de jugadores
+                const myPlayer = data.data.players?.find((p: any) => p.id === currentUserId)
+                if (myPlayer && myPlayer.character) {
+                    myCharacter = myPlayer.character
+                    console.log('Mi personaje:', myCharacter)
+                    showMyCharacterNotification()
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error al obtener estado del juego:', error)
+    }
+}
+
+// Mostrar notificación del personaje al jugador
+const showMyCharacterNotification = () => {
+    if (!myCharacter) return
+    
+    const characterEmojis: Record<string, string> = {
+        'Aldeano': '👨‍🌾',
+        'Hombre Lobo': '🐺',
+        'Vidente': '🔮',
+        'Bruja': '🧙‍♀️',
+        'Cazador': '🏹',
+        'Cupido': '💘',
+        'Ladrón': '🦝',
+        'Protector': '🛡️',
+        'Niña': '👧'
+    }
+    
+    const emoji = characterEmojis[myCharacter] || '❓'
+    addGameMessage(`${emoji} Tu personaje es: ${myCharacter}`, 'system')
+}
+
+// Verificar si es el turno del jugador actual basado en la fase y su personaje
+const checkIfMyTurn = (phase: string) => {
+    if (!myCharacter) {
+        isMyTurn = false
+        return
+    }
+    
+    const phaseToCharacter: Record<string, string> = {
+        'cupido': 'Cupido',
+        'thief': 'Ladrón',
+        'protector': 'Protector',
+        'seer': 'Vidente',
+        'wolves': 'Hombre Lobo',
+        'witch': 'Bruja'
+    }
+    
+    const activeCharacter = phaseToCharacter[phase]
+    isMyTurn = activeCharacter === myCharacter
+    
+    if (isMyTurn) {
+        addGameMessage(`🎯 ¡Es tu turno de actuar!`, 'action')
+    }
+}
+
+// Actualizar el panel de acción según la fase
+const updateActionPanel = (phase: string) => {
+    const actionPanel = document.getElementById('actionPanel')
+    if (!actionPanel) return
+    
+    // Si no es turno del jugador, ocultar panel
+    if (!isMyTurn || phase === 'day') {
+        actionPanel.style.display = 'none'
+        return
+    }
+    
+    // Mostrar panel de acción
+    actionPanel.style.display = 'block'
+    
+    // Configurar el contenido del panel según la fase
+    const actionContent = document.getElementById('actionContent')
+    if (actionContent) {
+        const actionMessages: Record<string, string> = {
+            'cupido': 'Elige a 2 jugadores para enamorar',
+            'thief': '¿Deseas intercambiar tu rol con otro jugador?',
+            'protector': 'Elige a un jugador para proteger esta noche',
+            'seer': 'Elige a un jugador para ver su rol',
+            'wolves': 'Vota con los demás lobos para elegir una víctima',
+            'witch': 'Puedes usar tus pociones (vida o muerte)'
+        }
+        
+        actionContent.textContent = actionMessages[phase] || 'Espera tu turno...'
     }
 }
 
@@ -1128,7 +1274,8 @@ const initLobbyUpdates = async (gameId: number) => {
                     max_players: data.game.max_players ?? gameData?.max_players,
                     current_players: data.game.current_players ?? gameData?.current_players,
                     status: data.game.status ?? gameData?.status,
-                    players: data.game.players ?? gameData?.players
+                    players: data.game.players ?? gameData?.players,
+                    host: data.game.host ?? gameData?.host
                 }
                 
                 // Actualizar la UI

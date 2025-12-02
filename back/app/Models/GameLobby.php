@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GameLobby extends Model
 {
@@ -18,15 +18,18 @@ class GameLobby extends Model
         'is_alive'
     ];
 
-    public function character() : HasMany {
-        return $this->hasMany(Character::class, 'id_game', 'id_character');
+    public function character(): BelongsTo
+    {
+        return $this->belongsTo(Character::class, 'id_character', 'id');
     }
 
-    public function game() : HasMany {
-        return $this->hasMany(Game::class, 'id_game', 'id_game');
+    public function game(): BelongsTo
+    {
+        return $this->belongsTo(Game::class, 'id_game', 'id');
     }
 
-    public function user() : HasMany {
-        return $this->hasMany(User::class, 'id_game', 'id_user');
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_user', 'id');
     }
 }
