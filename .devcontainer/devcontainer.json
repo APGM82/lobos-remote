@@ -3,48 +3,12 @@
   "dockerComposeFile": "../docker-compose.yaml",
   "service": "frontend",
   "workspaceFolder": "/app",
-  "features": {
-    "ghcr.io/devcontainers/features/sshd:1": {
-      "version": "latest"
-    }
-  },
   "forwardPorts": [5173, 8000, 8080, 3306],
   "portsAttributes": {
-    "5173": {
-      "label": "Frontend (Vite)",
-      "onAutoForward": "openBrowser",
-      "visibility": "public"
-    },
-    "8000": {
-      "label": "Backend (Laravel)",
-      "onAutoForward": "silent",
-      "visibility": "public"
-    },
-    "8080": {
-      "label": "WebSocket (Reverb)",
-      "onAutoForward": "silent",
-      "visibility": "public"
-    },
-    "3306": {
-      "label": "MySQL",
-      "onAutoForward": "silent",
-      "visibility": "private"
-    }
+    "5173": { "label": "Frontend (Vite)" },
+    "8000": { "label": "Backend (Laravel)" },
+    "8080": { "label": "WebSocket (Reverb)" },
+    "3306": { "label": "MySQL" }
   },
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-azuretools.vscode-docker",
-        "bmewburn.vscode-intelephense-client",
-        "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint"
-      ],
-      "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash"
-      }
-    }
-  },
-  "postCreateCommand": "chmod +x .devcontainer/setup.sh",
-  "postStartCommand": "docker-compose up -d",
-  "postAttachCommand": ".devcontainer/setup.sh"
+  "postStartCommand": "docker-compose up -d"
 }
