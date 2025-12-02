@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\API\CharacterController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\GameController;
@@ -97,7 +96,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('/leave', [GameController::class, 'leave']);
             Route::post('/start', [GameController::class, 'start']);
             Route::get('/players', [GameController::class, 'getPlayers']);
-            Route::post('/assign-characters', [CharacterController::class, 'assignCharactersToUser']);
         });
     });
 

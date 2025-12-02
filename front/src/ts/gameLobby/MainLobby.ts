@@ -107,7 +107,7 @@ const loadGameInfo = async (gameId: number) => {
         if (data.success && data.data) {
             gameData = data.data
             updateLobbyInfo()
-            await renderCards()
+            renderCards()
         } else {
             alert(data.message || 'Error al cargar la partida')
         }
@@ -201,7 +201,9 @@ const updateStartButtonState = () => {
     const hostId = gameData.host?.id ?? null
     const isHost = currentUserId !== null && hostId === currentUserId
 
-    if (!isHost) {
+    console.log(gameData.status?.name)
+
+    if (!isHost || gameData.status?.name === 'en_progreso' || gameData.status?.name === 'en_curso' || gameData.status?.name === 'finalizada') {
         hideHostControls()
         return
     }
@@ -676,6 +678,17 @@ const renderCards = () => {
         if (isEnabled && player && player.is_alive === false) {
             const statusDiv = document.createElement('div')
             statusDiv.classList.add('player-status')
+            switch (player.character) {
+                case 2: playerCard.classList.add('aldeano'); break;
+                case 3: playerCard.classList.add('lobo'); break;
+                case 4: playerCard.classList.add('cupido'); break;
+                case 5: playerCard.classList.add('ladron'); break;
+                case 6: playerCard.classList.add('protector'); break;
+                case 7: playerCard.classList.add('bruja'); break;
+                case 8: playerCard.classList.add('vidente'); break;
+                case 9: playerCard.classList.add('niña'); break;
+                default:
+            }
             statusDiv.textContent = '💀 Muerto'
             playerCard.appendChild(statusDiv)
         }

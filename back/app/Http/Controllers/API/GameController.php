@@ -1096,27 +1096,24 @@ class GameController extends Controller
             $userIds = $lobbies->pluck('id_user')->toArray();
             $totalUsers = count($userIds);
 
-            // Limpia asignaciones previas en la pivot para esta partida (evita duplicados/estado anterior)
             GameLobby::where('id_game', $idGame)->whereIn('id_user', $userIds)->delete();
 
-            // Calcula número de lobos y mezcla usuarios
             $maxWolves = 1 + floor($totalUsers / 10);
             shuffle($userIds);
 
             $index = 0;
 
-            // Asignar lobos
+
             for ($n = 0; $n < $maxWolves && $index < $totalUsers; $n++, $index++) {
                 $userId = $userIds[$index];
 
-                // Attach al pivot usando la relación del User para que Laravel maneje la pivot correctamente
                 $user = User::find($userId);
                 if ($user) {
                     $user->characterInGame()->attach($characters['Lobo']->id, ['id_game' => $idGame]);
                 }
             }
 
-            // El resto aldeanos
+
             for (; $index < $totalUsers; $index++) {
                 $userId = $userIds[$index];
                 $user = User::find($userId);
