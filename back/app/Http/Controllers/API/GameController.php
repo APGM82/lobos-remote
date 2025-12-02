@@ -1141,35 +1141,38 @@ class GameController extends Controller
 
     public function fillBots($idGame)
     {
-    // Obtener el juego (un solo registro)
-    $game = Game::findOrFail($idGame); // en vez de Game::get()->where(...)
+        // Obtener el juego
+        $game = Game::findOrFail($idGame);
 
-    // Jugadores humanos ya en la partida
-    $players = GameLobby::where('id_game', $idGame)->get();
-    $numPlayers = $players->count();
+        // Jugadores ya en la partida
+        $existingPlayerIds = GameLobby::where('id_game', $idGame)
+            ->pluck('id_user')
+            ->toArray();
+        
+        $numPlayers = count($existingPlayerIds);
 
-    // Si ya está llena, no hacemos nada
-    if ($numPlayers >= $game->max_players) {
-        return;
+        // Si ya está llena, no hacemos nada
+        if ($numPlayers >= $game->max_players) {
+            return;
+        }
+
+        // Calcular cuántos bots faltan
+        $botsNeeded = $game->max_players - $numPlayers;
+
+        // Obtener bots disponibles que NO estén ya en la partida
+        $bots = User::where('isBot', 1)
+            ->whereNotIn('id', $existingPlayerIds)
+            ->take($botsNeeded)
+            ->get();
+
+        // Insertar en GameLobby
+        foreach ($bots as $bot) {
+            GameLobby::create([
+                'id_game'  => $idGame,
+                'id_user'  => $bot->id,
+                'id_character' => 1
+            ]);
+        }
     }
-
-    // Calcular cuántos bots faltan
-    $botsNeeded = $game->max_players - $numPlayers;
-
-    // Obtener bots disponibles (limitar al número necesario)
-    $bots = User::where('isBot', 1)
-        ->take($botsNeeded)
-        ->get();
-
-    // Insertar en GameLobby (o usar relación many-to-many si la tienes)
-    foreach ($bots as $bot) {
-        GameLobby::create([
-            'id_game'  => $idGame,
-            'id_user'  => $bot->id,
-            'id_character' => 1
-        ]);
-    }
-}
-
 }
 

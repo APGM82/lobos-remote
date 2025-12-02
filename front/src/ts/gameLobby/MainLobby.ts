@@ -449,6 +449,17 @@ const bindStartButton = (gameId: number) => {
                 }
 
                 updateLobbyInfo()
+                
+                // Activar modo de juego directamente desde la respuesta del API
+                if (data.data.phase) {
+                    console.log('Partida iniciada, activando fase:', data.data.phase)
+                    handlePhaseChange(
+                        data.data.phase, 
+                        `La partida ha comenzado - Fase: ${data.data.phase}`,
+                        data.data.phaseDuration || 20
+                    )
+                }
+                
                 alert(data.message || 'La partida ha comenzado')
             } else {
                 alert(data.message || 'Error al iniciar la partida')

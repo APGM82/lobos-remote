@@ -142,7 +142,6 @@ class GamePlayController extends Controller
         try {
             $voterId = auth()->id() ?? $request->input('voter_id');
             $targetId = $request->input('target_id');
-            $votingType = $request->input('voting_type', 'village');
 
             if (!$voterId || !$targetId) {
                 return response()->json([
@@ -150,6 +149,19 @@ class GamePlayController extends Controller
                     'message' => 'Faltan parametros'
                 ], 400);
             }
+
+            // Verificar que estamos en fase de votación
+            $gameState = $this->gameFlow->getGameState($gameId);
+            $currentPhase = $gameState['phase'] ?? '';
+            
+            if (!in_array($currentPhase, ['wolves', 'day'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No es momento de votar'
+                ], 400);
+            }
+            
+            $votingType = $currentPhase === 'wolves' ? 'wolves' : 'village';
 
             $voter = GameLobby::where('id_game', $gameId)
                 ->where('id_user', $voterId)
@@ -204,12 +216,20 @@ class GamePlayController extends Controller
             $gameState['votes'][$voterId] = $targetId;
             $this->gameFlow->saveGameState($gameId, $gameState);
 
-            $voteCounts = array_count_values($gameState['votes']);
-            event(new VoteReceived($gameId, $votingType, $voterId, $targetId, $voteCounts));
+            // Agrupar votos por target: target_id => [voter_ids]
+            $votesByTarget = [];
+            foreach ($gameState['votes'] as $voter => $target) {
+                if (!isset($votesByTarget[$target])) {
+                    $votesByTarget[$target] = [];
+                }
+                $votesByTarget[$target][] = $voter;
+            }
+            
+            event(new VoteReceived($gameId, $votingType, $voterId, $targetId, $votesByTarget));
 
             return response()->json([
                 'success' => true,
-                'data' => ['currentVotes' => $voteCounts],
+                'data' => ['currentVotes' => $votesByTarget],
                 'message' => 'Voto registrado'
             ], 200);
         } catch (Exception $e) {

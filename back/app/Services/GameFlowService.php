@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Models\Game;
 use App\Models\GameLobby;
+use App\Models\User;
 use App\Events\GamePhaseChanged;
 use App\Events\GameMessage;
 use App\Events\VotingStarted;
+use App\Events\VoteReceived;
 use App\Events\PlayerKilled;
 use App\Events\GameEnded;
 use Illuminate\Support\Facades\Cache;
@@ -28,22 +30,23 @@ class GameFlowService
     // ==================== CONSTANTES ====================
     
     // Tiempos de fases (en segundos)
-    const PHASE_CUPIDO = 20;
-    const PHASE_THIEF = 15;
-    const PHASE_PROTECTOR = 15;
-    const PHASE_SEER = 15;
-    const PHASE_WOLVES = 60;
-    const PHASE_WITCH = 20;
-    const PHASE_DAY = 120;
+    //TODO (a base de datos)
+    const PHASE_CUPIDO = 10;
+    const PHASE_THIEF = 10;
+    const PHASE_PROTECTOR = 10;
+    const PHASE_SEER = 10;
+    const PHASE_WOLVES = 20;
+    const PHASE_WITCH = 10;
+    const PHASE_DAY = 20;
 
-    // Nombres de personajes
-    const ROLE_WOLF = 'Hombre Lobo';
+    // Nombres de personajes (deben coincidir con la BD)
+    const ROLE_WOLF = 'Lobo';
     const ROLE_VILLAGER = 'Aldeano';
     const ROLE_SEER = 'Vidente';
     const ROLE_WITCH = 'Bruja';
     const ROLE_HUNTER = 'Cazador';
     const ROLE_CUPID = 'Cupido';
-    const ROLE_THIEF = 'Ladrón';
+    const ROLE_THIEF = 'Ladron';
     const ROLE_PROTECTOR = 'Protector';
     const ROLE_GIRL = 'Niña';
 
@@ -70,9 +73,8 @@ class GameFlowService
         $this->saveGameState($game->id, $gameState);
 
         // Emitir eventos de inicio
-        $this->emitPhaseChange($game, 'cupido', false);
         $this->emitMessage($game->id, '🌙 La noche cae sobre el pueblo...');
-        $this->emitMessage($game->id, self::PHASE_MESSAGES['cupido']);
+        $this->emitPhaseChange($game, 'cupido', false);
 
         return [
             'phase' => 'cupido',
@@ -113,6 +115,15 @@ class GameFlowService
         $currentPhase = $gameState['phase'];
         $turn = $gameState['turn'];
 
+        // Resolver votación pendiente antes de cambiar de fase
+        if ($currentPhase === 'wolves') {
+            $this->resolveWolvesVoting($game->id);
+        }
+        
+        if ($currentPhase === 'day') {
+            $this->resolveVillageVoting($game->id);
+        }
+
         // Determinar siguiente fase
         $nextPhase = $this->getNextPhase($currentPhase, $turn);
 
@@ -122,6 +133,9 @@ class GameFlowService
             $this->emitMessage($game->id, "Cae la noche {$turn} sobre el pueblo...");
         }
 
+        // Recargar el estado después de resolver votación
+        $gameState = $this->getGameState($game->id);
+        
         // Actualizar estado
         $gameState['phase'] = $nextPhase;
         $gameState['turn'] = $turn;
@@ -134,9 +148,8 @@ class GameFlowService
         // Determinar si hay votación en la nueva fase
         $votingInProgress = ($nextPhase === 'day' || $nextPhase === 'wolves');
 
-        // Emitir evento de cambio de fase
+        // Emitir evento de cambio de fase (ya incluye el mensaje de fase)
         $this->emitPhaseChange($game, $nextPhase, $votingInProgress);
-        $this->emitMessage($game->id, self::PHASE_MESSAGES[$nextPhase] ?? "Fase: {$nextPhase}");
 
         // Si es fase de lobos, iniciar votación de lobos
         if ($nextPhase === 'wolves') {
@@ -155,6 +168,98 @@ class GameFlowService
             'turn' => $turn,
             'duration' => $this->getPhaseDuration($nextPhase),
         ];
+    }
+
+    /**
+     * Resolver la votación de los lobos
+     */
+    private function resolveWolvesVoting(int $gameId): void
+    {
+        $gameState = $this->getGameState($gameId);
+        $votes = $gameState['votes'] ?? [];
+
+        if (empty($votes)) {
+            $this->emitMessage($gameId, "Los lobos no pudieron decidir...");
+            return;
+        }
+
+        // Contar votos por objetivo
+        $voteCounts = array_count_values($votes);
+        arsort($voteCounts);
+
+        // Obtener el más votado
+        $victimId = array_key_first($voteCounts);
+        $maxVotes = $voteCounts[$victimId];
+
+        // Si hay empate, elegir al azar
+        $tied = array_filter($voteCounts, fn($v) => $v === $maxVotes);
+        if (count($tied) > 1) {
+            $tiedIds = array_keys($tied);
+            $victimId = $tiedIds[array_rand($tiedIds)];
+        }
+
+        // Guardar la víctima para que muera al amanecer
+        $gameState['wolfVictim'] = $victimId;
+        $gameState['votes'] = [];
+        $this->saveGameState($gameId, $gameState);
+
+        $this->emitMessage($gameId, "Los lobos han elegido a su víctima...");
+        
+        \Log::info("Lobos eligieron víctima: {$victimId}", ['votes' => $voteCounts]);
+    }
+
+    /**
+     * Resolver la votación del pueblo (linchamiento)
+     */
+    private function resolveVillageVoting(int $gameId): void
+    {
+        $gameState = $this->getGameState($gameId);
+        $votes = $gameState['votes'] ?? [];
+
+        if (empty($votes)) {
+            $this->emitMessage($gameId, "El pueblo no llegó a un acuerdo. Nadie será linchado.");
+            return;
+        }
+
+        // Contar votos por objetivo
+        $voteCounts = array_count_values($votes);
+        arsort($voteCounts);
+
+        // Obtener el más votado
+        $victimId = array_key_first($voteCounts);
+        $maxVotes = $voteCounts[$victimId];
+
+        // Si hay empate, elegir al azar
+        $tied = array_filter($voteCounts, fn($v) => $v === $maxVotes);
+        if (count($tied) > 1) {
+            $tiedIds = array_keys($tied);
+            $victimId = $tiedIds[array_rand($tiedIds)];
+        }
+
+        // Matar al jugador linchado
+        $death = $this->killPlayer($gameId, $victimId, 'village');
+        
+        if ($death) {
+            // Verificar si era cazador
+            $victim = GameLobby::where('id_game', $gameId)
+                ->where('id_user', $victimId)
+                ->with('character:id,name')
+                ->first();
+                
+            if ($victim && $victim->character && $victim->character->name === self::ROLE_HUNTER) {
+                $this->emitMessage($gameId, "💥 ¡El Cazador puede disparar antes de morir!");
+                // TODO: Implementar acción del cazador
+            }
+        }
+
+        // Limpiar votos
+        $gameState['votes'] = [];
+        $this->saveGameState($gameId, $gameState);
+
+        // Verificar condición de victoria
+        $this->checkWinCondition($gameId);
+        
+        \Log::info("Pueblo linchó a: {$victimId}", ['votes' => $voteCounts]);
     }
 
     /**
@@ -219,6 +324,9 @@ class GameFlowService
         $targetIds = $targets->pluck('id_user')->toArray();
 
         event(new VotingStarted($gameId, 'wolves', self::PHASE_WOLVES, $wolfIds, $targetIds));
+
+        // Hacer que los bots lobos voten automáticamente
+        $this->makeBotsVote($gameId, 'wolves', $wolves, $targetIds);
     }
 
     /**
@@ -236,6 +344,9 @@ class GameFlowService
         $playerIds = $alivePlayers->pluck('id_user')->toArray();
 
         event(new VotingStarted($gameId, 'village', self::PHASE_DAY, $playerIds, $playerIds));
+
+        // Hacer que los bots voten automáticamente
+        $this->makeBotsVote($gameId, 'village', $alivePlayers, $playerIds);
     }
 
     // ==================== MUERTES NOCTURNAS ====================
@@ -469,7 +580,7 @@ class GameFlowService
         return GameLobby::where('id_game', $gameId)
             ->where('is_alive', 1)
             ->whereHas('character', fn($q) => $q->where('name', $roleName))
-            ->with(['user:id,nickname', 'character:id,name'])
+            ->with(['user:id,nickname,isBot', 'character:id,name'])
             ->get();
     }
 
@@ -481,7 +592,7 @@ class GameFlowService
         return GameLobby::where('id_game', $gameId)
             ->where('is_alive', 1)
             ->whereNotIn('id_user', $excludeIds)
-            ->with(['user:id,nickname', 'character:id,name'])
+            ->with(['user:id,nickname,isBot', 'character:id,name'])
             ->get();
     }
 
@@ -492,7 +603,72 @@ class GameFlowService
     {
         return GameLobby::where('id_game', $gameId)
             ->where('is_alive', 1)
-            ->with(['user:id,nickname', 'character:id,name'])
+            ->with(['user:id,nickname,isBot', 'character:id,name'])
             ->get();
+    }
+
+    /**
+     * Hacer que los bots voten automáticamente
+     */
+    private function makeBotsVote(int $gameId, string $votingType, $voters, array $targetIds): void
+    {
+        if (empty($targetIds)) {
+            return;
+        }
+
+        $gameState = $this->getGameState($gameId);
+        $botsVoted = false;
+        
+        foreach ($voters as $voter) {
+            // Verificar si es un bot
+            if (!$voter->user || !$voter->user->isBot) {
+                continue;
+            }
+
+            $botId = $voter->id_user;
+            
+            // Si ya votó, saltar
+            if (isset($gameState['votes'][$botId])) {
+                continue;
+            }
+
+            // Elegir un objetivo aleatorio (que no sea él mismo si es votación del pueblo)
+            $availableTargets = array_values(array_filter($targetIds, fn($t) => $t !== $botId));
+            if (empty($availableTargets)) {
+                $availableTargets = array_values($targetIds);
+            }
+            
+            // Seleccionar objetivo aleatorio
+            $targetId = $availableTargets[array_rand($availableTargets)];
+            
+            // Registrar el voto
+            $gameState['votes'][$botId] = $targetId;
+            $botsVoted = true;
+            
+            \Log::info("Bot {$botId} votó por {$targetId} en votación {$votingType}");
+        }
+        
+        if (!$botsVoted) {
+            return;
+        }
+        
+        $this->saveGameState($gameId, $gameState);
+
+        // Emitir evento con los votos actualizados
+        $votesByTarget = [];
+        foreach ($gameState['votes'] as $visitorId => $targetId) {
+            if (!isset($votesByTarget[$targetId])) {
+                $votesByTarget[$targetId] = [];
+            }
+            $votesByTarget[$targetId][] = $visitorId;
+        }
+        
+        // Obtener el último bot que votó para el evento
+        $lastBotId = array_key_last($gameState['votes']);
+        $lastTargetId = $gameState['votes'][$lastBotId];
+        
+        event(new VoteReceived($gameId, $votingType, $lastBotId, $lastTargetId, $votesByTarget));
+        
+        \Log::info("Votos de bots emitidos", ['votes' => $votesByTarget]);
     }
 }
