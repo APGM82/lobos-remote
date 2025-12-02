@@ -889,6 +889,9 @@ class GameController extends Controller
                 'users:id,name,nickname'
             ]);
 
+            // Disparar evento de broadcasting para notificar a los jugadores del cambio
+            event(new GameUpdated($game));
+
             return response()->json([
                 'success' => true,
                 'data' => [
