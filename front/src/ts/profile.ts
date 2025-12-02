@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nameInput = document.getElementById('nameInput') as HTMLInputElement;
     const emailValue = document.getElementById('emailValue') as HTMLSpanElement;
     const roleValue = document.getElementById('roleValue') as HTMLSpanElement;
-    const passwordValue = document.getElementById('passwordValue') as HTMLSpanElement;
+    const _passwordValue = document.getElementById('passwordValue') as HTMLSpanElement; // Prefijo _ para uso futuro
     const errorDiv = document.getElementById('profileError') as HTMLDivElement;
     const errorText = document.getElementById('errorText') as HTMLParagraphElement;
 

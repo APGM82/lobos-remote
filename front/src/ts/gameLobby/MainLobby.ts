@@ -26,7 +26,7 @@ let isUpdatingGame = false
 let gameMode: 'lobby' | 'playing' = 'lobby'
 let hasVoted = false
 let votingInProgress = false
-let votingType: 'wolves' | 'village' | null = null
+let _votingType: 'wolves' | 'village' | null = null // Prefijo _ para indicar variable reservada para uso futuro
 let myCharacter: string | null = null // Personaje del jugador actual
 let isMyTurn = false // Si es el turno del jugador actual para actuar
 let eligibleVoters: number[] = []
@@ -617,7 +617,7 @@ const renderCards = () => {
         const avatar = document.createElement('div')
         avatar.classList.add('player-avatar')
 
-        const currentPlayer = players.find(p  => p.id === currentUserId)
+        const currentPlayer = players.find((p: any) => p.id === currentUserId)
         if (player != null) {
             if (currentPlayer.character === 3 && player && player.character === 3) {
                 playerCard.classList.add('lobo')
