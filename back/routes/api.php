@@ -88,7 +88,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [GameController::class, 'index']);
         Route::get('/active', [GameController::class, 'activeGame']);
         Route::post('/', [GameController::class, 'store']);
-        
+
         Route::prefix('{gameId}')->whereNumber('gameId')->group(function () {
             Route::get('/', [GameController::class, 'show']);
             Route::post('/', [GameController::class, 'update']);
@@ -106,7 +106,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [GameController::class, 'index']);
         Route::get('/active', [GameController::class, 'activeGame']);
         Route::post('/', [GameController::class, 'store']);
-        
+
         Route::prefix('{id}')->whereNumber('id')->group(function () {
             Route::get('/', [GameController::class, 'show']);
             Route::post('/', [GameController::class, 'update']);
@@ -119,7 +119,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //=> Gameplay
     Route::prefix('gameplay/{gameId}')->whereNumber('gameId')->group(function () {
-        
+
         // Estado del juego
         Route::get('/state', [GamePlayController::class, 'getGameState']);
         Route::post('/start', [GamePlayController::class, 'startGame']);

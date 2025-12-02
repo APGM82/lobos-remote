@@ -41,12 +41,18 @@ class UserController extends Controller
         ], 200);
     }
 
+    public function show($id) {
+        $user = User::find($id);
+
+        return response()->json(["success" => true, "data" => $user], 200);
+    }
+
     /**
      * Buscar usuarios por nickname con paginación
      * Acepta parámetro 'page' en la request para navegar entre páginas
      * Devuelve 5 usuarios por página que coincidan con el filtro
      */
-    public function show(Request $request, $nickname){
+    public function showByNickname(Request $request, $nickname){
         // Aplicar paginación: 5 usuarios por página
         // Laravel automáticamente obtiene el parámetro 'page' de la request
         $usersPaginated = User::where('nickname', 'like', "%$nickname%")->paginate(5);

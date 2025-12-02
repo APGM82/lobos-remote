@@ -2,7 +2,6 @@ import routes from "../routes.ts"
 import { getToken } from "../auth.ts"
 
 const apiUrl = routes.gamesUrl
-
 /**
  * Obtiene el token de autenticación dinámicamente
  * @returns Token de autenticación o null si no existe
@@ -64,7 +63,8 @@ const startGame = async (gameId: number) => {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
-            }
+            },
+            body: JSON.stringify({})
         });
     } catch (error) {
         throw error
@@ -93,10 +93,52 @@ const updateGameDetails = async (gameId: number, payload: { name: string; max_pl
     }
 }
 
+/**
+ * Obtiene el estado del juego (fase actual, personajes, etc.)
+ * @param gameId - ID de la partida
+ * @returns Promise con la respuesta del servidor
+ */
+const getGameState = async (gameId: number) => {
+    try {
+        const token = getAuthToken()
+        return await fetch(`http://127.0.0.1:8000/api/gameplay/${gameId}/state`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+    } catch (error) {
+        throw error
+    }
+}
+
+/**
+ * Avanza a la siguiente fase del juego
+ * @param gameId - ID de la partida
+ * @returns Promise con la respuesta del servidor
+ */
+const nextPhase = async (gameId: number) => {
+    try {
+        const token = getAuthToken()
+        return await fetch(`http://127.0.0.1:8000/api/gameplay/${gameId}/next-phase`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+    } catch (error) {
+        throw error
+    }
+}
+
 export {
     getGameInfo,
     leaveGame,
     startGame,
-    updateGameDetails
+    updateGameDetails,
+    getGameState,
+    nextPhase
 }
 
