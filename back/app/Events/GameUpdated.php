@@ -43,7 +43,7 @@ class GameUpdated implements ShouldBroadcast
     {
         // Recargar la partida con todas las relaciones actualizadas
         $this->game->load(['userHost:id,name,nickname,email', 'status:id,code_status,name', 'users:id,name,nickname']);
-        
+
         return [
             'game_id' => $this->game->id,
             'game' => [
@@ -67,6 +67,7 @@ class GameUpdated implements ShouldBroadcast
                         'id' => $user->id,
                         'name' => $user->name,
                         'nickname' => $user->nickname,
+                        'character' => $user->pivot->id_character
                     ];
                 }),
             ],
